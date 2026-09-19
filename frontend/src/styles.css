@@ -1,0 +1,223 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Vazirmatn — self-hosted variable font (public/fonts/vazirmatn.woff2).
+   One request covers weights 100–900. `font-display: swap` keeps text
+   visible in the fallback stack while the font streams in (no invisible
+   text), and local fonts are consistent across browsers because there is
+   no third-party CSS/unicode-range indirection.
+   ------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Vazirmatn";
+  src:
+    local("Vazirmatn"),
+    url("/fonts/vazirmatn.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-deal: var(--deal);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --shadow-glow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 25%, transparent),
+    0 0 28px -6px color-mix(in oklab, var(--primary) 55%, transparent);
+  --shadow-soft: 0 18px 40px -24px oklch(0 0 0 / 0.9);
+}
+
+:root {
+  --radius: 0.9rem;
+  --background: oklch(0.19 0.013 62);
+  --foreground: oklch(0.92 0.024 80);
+  --card: oklch(0.235 0.016 62);
+  --card-foreground: oklch(0.92 0.024 80);
+  --popover: oklch(0.235 0.016 62);
+  --popover-foreground: oklch(0.92 0.024 80);
+  --primary: oklch(0.72 0.145 62);
+  --primary-soft: oklch(0.83 0.125 70);
+  --primary-foreground: oklch(0.17 0.022 62);
+  --deal: oklch(0.74 0.175 48);
+  --secondary: oklch(0.44 0.085 158);
+  --secondary-foreground: oklch(0.95 0.025 90);
+  --muted: oklch(0.27 0.016 62);
+  --muted-foreground: oklch(0.75 0.025 78);
+  --accent: oklch(0.33 0.038 62);
+  --accent-foreground: oklch(0.92 0.024 80);
+  --destructive: oklch(0.6 0.19 27);
+  --destructive-foreground: oklch(0.96 0.01 80);
+  --border: oklch(0.35 0.03 62);
+  --input: oklch(0.35 0.03 62);
+  --ring: oklch(0.72 0.145 62);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Slim, warm scrollbar that matches the wood palette. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--primary) 32%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--primary) 28%, transparent);
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--primary) 52%, transparent);
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@utility wood-texture {
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      color-mix(in oklab, var(--primary) 6%, transparent) 0 2px,
+      transparent 2px 9px
+    ),
+    radial-gradient(
+      120% 100% at 50% 0%,
+      color-mix(in oklab, var(--primary) 12%, transparent),
+      transparent 70%
+    );
+}
+
+@utility grain-panel {
+  background-image: radial-gradient(
+    100% 120% at 50% 0%,
+    color-mix(in oklab, var(--secondary) 22%, transparent),
+    transparent 65%
+  );
+}
+
+@utility deal-badge {
+  background-image: linear-gradient(
+    135deg,
+    var(--primary-soft) 0%,
+    var(--primary) 45%,
+    var(--deal) 100%
+  );
+  color: var(--primary-foreground);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, white 25%, transparent),
+    0 8px 22px -8px color-mix(in oklab, var(--deal) 85%, transparent);
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* RTL marquee: the flex track is anchored at the container's RIGHT edge and
+   extends leftward, so the seamless drift is 0 → +50% (one full copy to the
+   right). Starting at -50% would push a copy wider than the viewport
+   entirely off-screen. */
+@keyframes marquee-rtl {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
+/* Very slow, seamless rightward drift for RTL marquees
+   (track = two identical sets). */
+@utility animate-marquee-rtl {
+  animation: marquee-rtl 150s linear infinite;
+}
+
+@utility edge-fade {
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 5%,
+    black 95%,
+    transparent 100%
+  );
+}
+
+/* Print: A4 sheet with standard margins for the printable invoice
+   (/invoice/:orderId). Unlayers the dark site background so only the
+   white paper and its ink reach the printer. */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+}

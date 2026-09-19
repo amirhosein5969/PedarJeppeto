@@ -12,10 +12,11 @@ export type AdminCategory = {
   image: string;
 };
 
-import catKitchen from "@/assets/cat-kitchen.jpg";
-import catOffice from "@/assets/cat-office.jpg";
-import catDigital from "@/assets/cat-digital.jpg";
-import catGift from "@/assets/cat-gift.jpg";
+// Static imagery is served from `public/` at the site root.
+const catKitchen = "/cat-kitchen.jpg";
+const catOffice = "/cat-office.jpg";
+const catDigital = "/cat-digital.jpg";
+const catGift = "/cat-gift.jpg";
 
 const seedCategories = (): AdminCategory[] => [
   { id: "cat-1", title: "ظروف و ابزار آشپزخانه چوبی", slug: "kitchen", image: catKitchen },

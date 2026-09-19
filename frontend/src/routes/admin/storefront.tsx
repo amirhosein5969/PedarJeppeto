@@ -28,7 +28,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import defaultHeroImg from "@/assets/hero-workshop.jpg";
+// Static imagery is served from `public/` at the site root.
+const defaultHeroImg = "/hero-workshop.jpg";
 
 export const Route = createFileRoute("/admin/storefront")({
   component: AdminStorefront,

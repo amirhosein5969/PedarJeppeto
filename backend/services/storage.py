@@ -69,12 +69,16 @@ class MediaStorage:
         )
 
     def _public_base_url(self) -> str:
-        """Base URL under which uploaded objects are publicly reachable."""
-        override = self._settings.media_public_base_url.strip()
-        if override:
-            return override.rstrip("/")
-        endpoint = self._settings.s3_endpoint_url.rstrip("/")
-        return f"{endpoint}/{self._settings.s3_bucket}"
+        """Base URL under which uploaded objects are publicly reachable.
+
+        Built from ``MEDIA_PUBLIC_URL`` (the host the *browser* can
+        resolve), **not** from ``S3_ENDPOINT_URL`` (the internal host the
+        backend uses). In Docker that means the client receives
+        ``http://localhost:9000/{bucket}/...`` instead of the unresolvable
+        ``http://minio:9000/{bucket}/...``.
+        """
+        host = self._settings.media_public_url.strip() or self._settings.s3_endpoint_url
+        return f"{host.rstrip('/')}/{self._settings.s3_bucket}"
 
     # -- public API ----------------------------------------------------------
     async def ensure_bucket(self) -> None:

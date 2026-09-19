@@ -58,9 +58,13 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = "hearthwood"
     s3_region: str = "us-east-1"
     s3_bucket: str = "hearthwood-media"
-    # Optional public base URL for media (CDN / reverse proxy). When empty,
-    # URLs are derived from the MinIO endpoint: {s3_endpoint_url}/{s3_bucket}.
-    media_public_base_url: str = ""
+    # Public host the BROWSER uses to fetch media. The bucket name is
+    # appended by the storage service, so clients receive
+    # {media_public_url}/{s3_bucket}/... . In Docker the backend talks to
+    # MinIO via the internal DNS name (``http://minio:9000``), but the
+    # browser can only resolve ``http://localhost:9000`` (or a CDN /
+    # reverse-proxy origin in production — set MEDIA_PUBLIC_URL).
+    media_public_url: str = "http://localhost:9000"
 
     # --- OTP / SMS gateway (api.ir) ------------------------------------------
     # Bearer token for https://s.api.ir (SmsOTP / CallOTP). Empty = the

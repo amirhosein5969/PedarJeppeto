@@ -7,9 +7,10 @@ import { TrustBar } from "@/components/shop/TrustBar";
 import { useCatalog } from "@/hooks/queries";
 import { loadAdminHeroSlides, type HeroSlide } from "@/lib/admin-hero";
 import { defaultHeroSlides, type Product } from "@/lib/shop-data";
-import heroImg from "@/assets/hero-workshop.jpg";
-import about1 from "@/assets/about-1.jpg";
-import about2 from "@/assets/about-2.jpg";
+// Static imagery is served from `public/` at the site root.
+const heroImg = "/hero-workshop.jpg";
+const about1 = "/about-1.jpg";
+const about2 = "/about-2.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({

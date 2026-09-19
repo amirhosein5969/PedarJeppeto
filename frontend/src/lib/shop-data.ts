@@ -6,9 +6,12 @@
  * module keeps the **domain type** (`Product`) and the pure formatting
  * helpers every page renders with.
  */
-import kitchenImg from "@/assets/cat-kitchen.jpg";
-import giftImg from "@/assets/cat-gift.jpg";
-import heroWorkshopImg from "@/assets/hero-workshop.jpg";
+// Static storefront imagery lives in `public/` and is served from the site
+// root — identical in dev, SSR, and the Docker production build (no hashing
+// or alias resolution involved).
+const kitchenImg = "/cat-kitchen.jpg";
+const giftImg = "/cat-gift.jpg";
+const heroWorkshopImg = "/hero-workshop.jpg";
 
 export type Category = {
   slug: string;

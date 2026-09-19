@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SectionHeader } from "@/components/shop/SectionHeader";
 import { cn } from "@/lib/utils";
-import heroWorkshop from "@/assets/hero-workshop.jpg";
-import about1 from "@/assets/about-1.jpg";
-import about2 from "@/assets/about-2.jpg";
-import kitchenImg from "@/assets/cat-kitchen.jpg";
-import officeImg from "@/assets/cat-office.jpg";
-import giftImg from "@/assets/cat-gift.jpg";
+// Static imagery is served from `public/` at the site root.
+const heroWorkshop = "/hero-workshop.jpg";
+const about1 = "/about-1.jpg";
+const about2 = "/about-2.jpg";
+const kitchenImg = "/cat-kitchen.jpg";
+const officeImg = "/cat-office.jpg";
+const giftImg = "/cat-gift.jpg";
 
 export const Route = createFileRoute("/about")({
   head: () => ({

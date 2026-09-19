@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { FaqAccordion } from "@/components/shop/FaqAccordion";
 import { SectionHeader } from "@/components/shop/SectionHeader";
-import catGiftImg from "@/assets/cat-gift.jpg";
+// Static imagery is served from `public/` at the site root.
+const catGiftImg = "/cat-gift.jpg";
 
 export const Route = createFileRoute("/guide")({
   head: () => ({

@@ -18,10 +18,10 @@ Nothing already present is ever overwritten, so the script is safe to re-run.
 
 Images
 ------
-Each unique local asset (``handcrafted-hearthwood/src/assets/*.jpg``) is
-uploaded to MinIO **once** via :class:`services.storage.MediaStorage`; the
-returned public URLs populate ``category.image_url`` and ``product.images``.
-Only the assets actually needed for rows that will be created are uploaded.
+Each unique local asset (``frontend/public/*.jpg``) is uploaded to MinIO
+**once** via :class:`services.storage.MediaStorage`; the returned public
+URLs populate ``category.image_url`` and ``product.images``. Only the
+assets actually needed for rows that will be created are uploaded.
 """
 
 from __future__ import annotations
@@ -44,9 +44,10 @@ from db.models import Category, Product, PromoCode, StoreSettings  # noqa: E402
 from services.settings import invalidate_store_settings_cache  # noqa: E402
 from services.storage import media_storage  # noqa: E402
 
-# Frontend lives next to the backend (../frontend).
+# Frontend lives next to the backend (../frontend); static imagery is served
+# from the Vite `public/` directory (site-root absolute paths).
 FRONTEND_ASSETS = (
-    Path(__file__).resolve().parents[2] / "frontend" / "src" / "assets"
+    Path(__file__).resolve().parents[2] / "frontend" / "public"
 )
 
 #: Seed stock level for every product (the mock has no stock concept).

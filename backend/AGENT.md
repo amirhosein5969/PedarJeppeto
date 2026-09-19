@@ -537,7 +537,7 @@ dev + prod SSR 200 on all routes.
   `AddToCartButton`/`CartContext` carry variants.
 - **34 endpoints** total under `/api/v1`.
 
-### Phase 8 — Secure OTP Authentication (api.ir + JWT) ✅ (current)
+### Phase 8 — Secure OTP Authentication (api.ir + JWT) ✅
 Real OTP login replacing the mock `X-User-Phone` bridge. **Security and
 cost control (anti SMS-bombing) are the top priorities.** Verified:
 E2E **32/32** (`phase6-otp-test.py`), `tsc --noEmit` clean, Docker
@@ -590,6 +590,38 @@ frontend SSR 200 on `/ /auth /shop /cart /profile/account`.
   token never blocks startup).
 - **36 endpoints** total under `/api/v1`.
 
+### Phase 9 — Media Public URL + Static Assets ✅ (current)
+Fixes the two media breakages from the Docker networking transition:
+(1) product/category images stored as `http://minio:9000/...` (an
+internal Docker DNS name browsers can't resolve → `ERR_NAME_NOT_RESOLVED`)
+and (2) storefront imagery not loading.
+
+- **`MEDIA_PUBLIC_URL`** (`core/config.py`, default
+  `http://localhost:9000`; root `.env`/`.env.example`/compose): the host
+  the **browser** uses for media. `services/storage.py::_public_base_url`
+  now builds client URLs from `MEDIA_PUBLIC_URL/{bucket}/...` instead of
+  `S3_ENDPOINT_URL` — uploads return `http://localhost:9000/...` (on a
+  VPS, point it at the CDN/proxy origin). The backend still talks to
+  MinIO internally via `S3_ENDPOINT_URL` (`http://minio:9000`).
+- **`scripts/fix_urls.py`** — one-shot, idempotent repair: rewrites the
+  leading internal-endpoint prefix to the public host in
+  `categories.image_url` (VARCHAR) and `products.images` (JSONB list).
+  First run rewrote 4 categories + 10 products.
+  Run: `docker compose exec -T backend python scripts/fix_urls.py`.
+- **Static assets → `frontend/public/`**: the 7 storefront JPGs
+  (hero-workshop, about-1/2, cat-kitchen/office/digital/gift) moved from
+  `src/assets/` (hashed Vite imports) to `public/` (served at the site
+  root, identical in dev/SSR/prod). The 6 referencing modules
+  (`shop-data.ts`, `index.tsx`, `about.tsx`, `guide.tsx`,
+  `admin-categories.ts`, `admin/storefront.tsx`) now use plain root
+  paths (`/hero-workshop.jpg`, …). `scripts/seed.py`'s `FRONTEND_ASSETS`
+  points at `frontend/public/` accordingly.
+- Verified: host fetch of a MinIO object via `localhost:9000` = 200
+  (image/jpeg); fresh `POST /upload` returns a `localhost:9000` URL;
+  `GET /categories` + `/products` serve public URLs; `/hero-workshop.jpg`
+  = 200 from the frontend container; SSR 200 on `/ /shop /about`;
+  `tsc --noEmit` clean.
+
 ---
 
 ## 5. Repository Layout (monorepo)
@@ -634,7 +666,7 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 │   │           ├── users.py        # GET /users (admin) + /users/me family (JWT) + /users/me/addresses (Phase 7)
 │   │           └── analytics.py    # GET /analytics/sales, /activities, /traffic
 │   ├── core/
-│   │   ├── config.py         # pydantic-settings (env-driven config; + api_ir_*, jwt_*)
+│   │   ├── config.py         # pydantic-settings (env-driven config; + api_ir_*, jwt_*, media_public_url)
 │   │   ├── cache.py          # async Redis client (lazy singleton) — carts + cache + counters + OTP state
 │   │   ├── middleware.py     # TrafficMiddleware — best-effort Redis page-view INCR on GETs (Phase 6)
 │   │   └── pricing.py        # Decimal helpers + FREE_SHIPPING_FROM + DEFAULT_SHIPPING_METHODS
@@ -653,10 +685,11 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 │   │   ├── user.py           # UserResponse (admin) + UserMe* + MyOrder* + UserAddress* (Phase 7)
 │   │   └── analytics.py      # SalesDayOut, TrafficDayOut, ActivityFeedOut (FeedOrder/User/Stock)
 │   ├── scripts/
-│   │   └── seed.py           # Great Seed — mock catalog → Postgres + MinIO (idempotent)
+│   │   ├── seed.py           # Great Seed — mock catalog → Postgres + MinIO (idempotent; assets from frontend/public)
+│   │   └── fix_urls.py       # one-shot: internal minio:9000 URLs → public host (Phase 9)
 │   └── services/
 │       ├── sms.py            # api.ir SmsOTP/CallOTP via httpx (Phase 8)
-│       ├── storage.py        # MediaStorage — async MinIO uploads (aioboto3)
+│       ├── storage.py        # MediaStorage — async MinIO uploads; public URLs via MEDIA_PUBLIC_URL
 │       ├── errors.py         # CheckoutError base (shared, avoids import cycles)
 │       ├── cart.py           # Redis cart (WATCH/MULTI, TTL 14d, qty cap 20, variants)
 │       ├── promotion.py      # assert_redeemable + calc_discount (single source)
@@ -666,7 +699,8 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 └── frontend/
     ├── Dockerfile        # bun build (NITRO_PRESET=node-server) → node:22-alpine :8080
     ├── .dockerignore
-    └── src/              # TanStack Start storefront + admin (see Phase 5–8 notes)
+    ├── public/           # static storefront imagery (site-root paths, Phase 9) + favicon/robots
+    └── src/              # TanStack Start storefront + admin (see Phase 5–9 notes)
 ```
 
 Planned for later phases: Redis read-caching for hot catalog endpoints,
@@ -716,8 +750,8 @@ docker compose exec backend python scripts/seed.py   # first run only (idempoten
 - Storefront `http://localhost:8080` · API `http://localhost:8010/api/v1` ·
   Swagger `http://localhost:8010/docs` · MinIO console `:9001`.
 - Backend container entrypoint: wait-for-pg → `alembic upgrade head` →
-  Uvicorn. The backend container mounts `./frontend/src/assets`
-  (`/frontend/src/assets:ro`) so `scripts/seed.py` can read the catalog
+  Uvicorn. The backend container mounts `./frontend/public`
+  (`/frontend/public:ro`) so `scripts/seed.py` can read the catalog
   images. Recreate after compose changes: `docker compose up -d --build backend`.
 - **Trap (this machine):** a stray host process can still own
   `127.0.0.1:8010`/`:8080` (e.g. an old dev uvicorn / Adobe Connect) and

@@ -30,13 +30,15 @@ The repository is split into two sibling projects:
 | Cache / ephemeral state | **Redis 7** | Hot-read caching + temporary shopping carts |
 | Object storage | **MinIO** (S3-compatible) | Product / wood-grain imagery via **aioboto3** |
 | Configuration | **pydantic-settings** | 12-factor: all config from environment / `.env` |
+| Auth | **PyJWT** + **httpx** (api.ir OTP: SMS/IVR Call) + passlib | Secure OTP login; Redis rate/brute-force limits |
+| Runtime | **Docker Compose** (5 services) | Fully containerized monorepo — root `docker-compose.yml` |
 
 ### Service ports (local development)
 
 | Service | Port |
 |---|---|
-| Frontend (TanStack Start dev server) | 8080 |
-| FastAPI backend | 8000 |
+| Frontend (TanStack Start, container `hh_frontend`) | 8080 |
+| FastAPI backend (container `hh_backend`) | 8010 |
 | PostgreSQL | 5432 |
 | Redis | 6379 |
 | MinIO S3 API | 9000 |
@@ -421,7 +423,7 @@ production node build.
   load testing, dockerized production deployment, real token/JWT auth to
   replace the `X-User-Phone` mock-auth bridge.
 
-### Phase 6 — Real Traffic Analytics + Luxury Customer Portal ✅ (current)
+### Phase 6 — Real Traffic Analytics + Luxury Customer Portal ✅
 Two features: live website-traffic counters and the customer self-service
 portal (`/profile`). Verified: backend E2E **31/31** (`phase6-test.py`),
 `tsc --noEmit` clean, prod node build SSR 200 on all portal + dashboard
@@ -493,67 +495,182 @@ routes.
   422s, orders list (images, money strings, ordering), self-cleans its
   test user.
 
+### Phase 7 — Address Book + Order Variants ✅
+Customer multi-address book (replaces the flat `users.province/city/
+zip_code/address` columns) + product variants (wood/color) flowing through
+the Redis cart into `OrderItem`. Verified: E2E 31/31, `tsc --noEmit` clean,
+dev + prod SSR 200 on all routes.
+
+- **Migration `b3f7c2a91d45 "Address book + order item variants"`** (new
+  head): creates `user_addresses` (user_id FK CASCADE, title, province,
+  city, zip_code, address, is_default, created/updated); data-migrates each
+  flat address to a default `UserAddress` row; drops the 4 flat `users`
+  columns; adds `order_items.wood_type/color` (VARCHAR(120) NULL).
+- **`db/models.py`** — `UserAddress` model; `User` slimmed + `addresses`
+  relationship (`all, delete-orphan`); `OrderItem` + variants.
+- **`endpoints/users.py`** — address-book CRUD at `/users/me/addresses`
+  (GET default-first, POST create — first becomes default, PUT update,
+  DELETE with default-promotion); admin `GET /users` populates the flat
+  address from each user's **default** `UserAddress` (one query).
+- **`schemas/user.py`** — `UserAddressOut/In/Update`; `UserMeOut/
+  UserMeUpdate` slimmed (no flat address).
+- **Variants:** `CartLine` dataclass + `CartAddIn/CartLineOut/
+  CartLineUpdateIn` carry `wood_type`/`color`; merge keeps incoming
+  non-None, `set_line` preserves existing when None (old carts stay
+  readable). `OrderItemOut` exposes them; checkout writes them from the
+  cart line. `schemas/order.py` adds `CustomerIn.address_id`.
+- **Checkout address flow** (`services/order.py`): with `address_id` the
+  saved address's fields are authoritative + it is promoted to default;
+  without it the `customer.*` fields are auto-saved, deduped by
+  (province, city, zip, address), first = default. `_clear_default`
+  enforces single-default in the app layer.
+- **My Orders identity fix:** checkout binds `Order.user_id` to the
+  logged-in account (auth bridge — see Phase 8), **not** the receiver's
+  phone; `CustomerOut.phone` = owner phone; receiver phone rides in
+  `shipping_details`.
+- **Frontend:** `useMyAddresses/useSaveAddress/useDeleteAddress` hooks
+  (`useMyAddresses` gated on the stored auth record for SSR);
+  `/profile/account` = profile form + **دفترچه آدرس‌ها** (address cards,
+  default badge, inline add/edit, set-default, delete); checkout
+  address-card picker (card vs. new-address mode); variant label
+  ("چوب … | … | همراه با روغن محافظ") on product/cart/checkout;
+  `AddToCartButton`/`CartContext` carry variants.
+- **34 endpoints** total under `/api/v1`.
+
+### Phase 8 — Secure OTP Authentication (api.ir + JWT) ✅ (current)
+Real OTP login replacing the mock `X-User-Phone` bridge. **Security and
+cost control (anti SMS-bombing) are the top priorities.** Verified:
+E2E **32/32** (`phase6-otp-test.py`), `tsc --noEmit` clean, Docker
+frontend SSR 200 on `/ /auth /shop /cart /profile/account`.
+
+- **Gateway** — `services/sms.py`: `send_otp_sms` (POST
+  `https://s.api.ir/api/sw1/SmsOTP`, `{"code","mobile","template":1}`)
+  and `send_otp_call` (POST `.../CallOTP`, `{"code","number"}`) via
+  `httpx.AsyncClient` + `Authorization: Bearer {API_IR_TOKEN}`.
+  **Empty `API_IR_TOKEN` → 503 without ever calling the provider (zero
+  cost)**; provider non-2xx/network → 502 and the pending code is
+  deleted. `requirements.txt` += `httpx`, `PyJWT`, `passlib`.
+- **`api/v1/endpoints/auth.py`:**
+  - `POST /auth/request-otp {phone, method: "sms"|"call"}` —
+    **SECURITY 1 (rate limit):** `INCR otp:reqs:{phone}` (TTL 900 s on
+    first touch); count > 3 → **429** (15-min block, provider never
+    called). Then 5-digit code via `secrets.randbelow(100_000)` →
+    `SETEX otp:code:{phone} 120 {code}`; dispatch per `method`.
+  - `POST /auth/verify-otp {phone, code}` — no pending code → 400;
+    wrong code → `INCR otp:fails:{phone}` (TTL 900 s); **SECURITY 2
+    (brute-force):** fails > 5 → `otp:code:{phone}` deleted + 400
+    (locked, even the right code now fails). On match: clears
+    `otp:code/otp:fails/otp:reqs`, find-or-creates the `User` by phone
+    (new → `role=customer`, name "مشتری چوب‌کار"), mints a **JWT**
+    (HS256, `JWT_SECRET`, 24 h, `sub=user.id` + phone + role) →
+    `TokenOut {access_token, phone, role, expires_in}`.
+- **`api/deps.py` (new)** — `get_current_user` (OAuth2PasswordBearer →
+  decode → load `User`; 401 invalid/missing, 403 inactive) and
+  `get_current_user_or_none` (optional, guest-safe). **All `/users/me`
+  routes are JWT-protected**; the `X-User-Phone` bridge is fully removed
+  from `users.py`. `orders.py` checkout uses `get_current_user_or_none`:
+  token → order binds to the account phone; no token → receiver (guests
+  still check out).
+- **Frontend** — `routes/auth.tsx` refactored (design kept): real
+  TanStack mutations against both endpoints; **strict 120 s countdown**;
+  resend hidden until the timer hits 0, then **two side-by-side buttons**
+  ("ارسال مجدد پیامک" + "دریافت کد از طریق تماس" → `method: "call"`);
+  subtle "اصلاح شماره" back button; local attempt counter — 429 **or**
+  attempts ≥ 3 → resend permanently disabled + toast "تعداد درخواست‌ها
+  بیش از حد مجاز است. لطفاً ۱۵ دقیقه صبر کنید.". On success the JWT is
+  saved into `choobkar-auth-user` (with phone/role) → the Customer
+  Portal (`/profile`) hydrates with **real** data. `lib/api.ts`:
+  interceptor injects `Authorization: Bearer <jwt>` (replaces
+  `X-User-Phone`); a 401 on `/users/me` clears the session and fires
+  `hc:auth-expired`; `useAuth.tsx` drops legacy token-less records and
+  listens for the expiry event. `api-types.ts` += `ApiOtpRequest/
+  ApiOtpSent/ApiOtpVerify/ApiAuthToken`.
+- **Env:** `API_IR_TOKEN` (empty = 503, zero cost) + `JWT_SECRET`
+  (root `.env` / `.env.example` / compose, `:-` defaults so a missing
+  token never blocks startup).
+- **36 endpoints** total under `/api/v1`.
+
 ---
 
-## 5. Repository Layout (Phase 6)
+## 5. Repository Layout (monorepo)
+
+The repo root is the monorepo: `backend/` + `frontend/` (formerly
+`handcrafted-hearthwood/`) + one Docker Compose stack. Git history is
+4 phased commits (see `setup_git.sh`); remote `origin/main`.
 
 ```text
-backend/
-├── AGENT.md              # this file — central memory
-├── docker-compose.yml    # postgres + redis + minio
-├── .env.example          # copy to .env (NEVER commit .env)
-├── .gitignore
-├── requirements.txt      # incl. python-multipart (File uploads) + redis (carts)
-├── alembic.ini           # migration config (URL injected by env.py)
-├── alembic/
-│   ├── env.py            # async env — reads core.config, imports db.models
-│   └── versions/         # migration scripts (head: 7c1b4e9d2a53 "User important date")
-├── main.py               # FastAPI app + CORS (allows :8080) + TrafficMiddleware + api_router + redis close
-├── api/
-│   └── v1/
-│       ├── api.py        # master APIRouter (single aggregation point)
-│       └── endpoints/
-│           ├── upload.py       # POST /upload (multipart → MinIO)
-│           ├── categories.py   # GET/POST /categories
-│           ├── products.py     # GET /products (?active=), POST /products, GET+PATCH /products/{id}
-│           ├── cart.py         # GET /cart, POST /cart/add, PATCH /cart/line, DELETE /cart/remove, /cart/clear (X-Session-Id)
-│           ├── promotions.py   # GET/POST /promotions, PATCH/DELETE /{id}, POST /validate
-│           ├── orders.py       # POST /orders (checkout + idempotency lock), GET /orders, GET /orders/{id}, PATCH /{id}/status
-│           ├── settings.py     # GET /settings, PATCH /settings (singleton, cache-invalidated)
-│           ├── users.py        # GET /users (admin list) + /users/me, PATCH /users/me (upsert), GET /users/me/orders (X-User-Phone)
-│           └── analytics.py    # GET /analytics/sales (7-day revenue), /activities (feed), /traffic (7-day page views from Redis)
-├── core/
-│   ├── config.py         # pydantic-settings (env-driven config)
-│   ├── cache.py          # async Redis client (lazy singleton) — carts + settings cache + traffic counters
-│   ├── middleware.py     # TrafficMiddleware — best-effort Redis page-view INCR on GETs (Phase 6)
-│   └── pricing.py        # Decimal helpers + FREE_SHIPPING_FROM + DEFAULT_SHIPPING_METHODS
-├── db/
-│   ├── database.py       # async engine, session factory, Base, get_db()
-│   └── models.py         # User, Category, Product, PromoCode, Order, OrderItem, StoreSettings
-├── schemas/
-│   ├── common.py         # shared constraints (ImageHttpUrl)
-│   ├── category.py       # CategoryCreate/Update/Response
-│   ├── product.py        # ProductCreate/Update/Response
-│   ├── cart.py           # CartAddIn, CartLineOut, CartOut
-│   ├── promotion.py      # PromoCreate/Update/Response, PromoValidateIn/Out
-│   ├── order.py          # CustomerIn, OrderCreateIn, OrderOut, to_order_out()
-│   ├── settings.py       # StoreSettingsOut, StoreSettingsUpdate, ShippingMethodIn/Out
-│   ├── user.py           # UserResponse (admin) + UserMeOut/UserMeUpdate/MyOrderOut/MyOrderItemOut (portal)
-│   └── analytics.py      # SalesDayOut, TrafficDayOut, ActivityFeedOut (FeedOrder/User/Stock)
-├── scripts/
-│   └── seed.py           # Great Seed — migrate mock catalog → Postgres + MinIO (idempotent)
-└── services/
-    ├── storage.py        # MediaStorage — async MinIO uploads (aioboto3)
-    ├── errors.py         # CheckoutError base (shared, avoids import cycles)
-    ├── cart.py           # Redis cart (WATCH/MULTI, TTL 14d, qty cap 20)
-    ├── promotion.py      # assert_redeemable + calc_discount (single source)
-    ├── settings.py       # StoreSettingsData/PricingRules — Redis-cached singleton
-    ├── lock.py           # CheckoutLock — Redis SETNX 10s TTL double-submit guard
-    └── order.py          # place_order — atomic checkout w/ dynamic pricing
+.
+├── docker-compose.yml    # postgres + redis + minio + backend + frontend (health-gated)
+├── .env / .env.example   # unified env (root .env is git-ignored; NEVER commit)
+├── .gitignore            # monorepo-level ignores
+├── README.md             # stack docs + `docker compose up -d --build` runbook
+├── setup_git.sh          # phased 4-commit history initializer
+├── backend/
+│   ├── AGENT.md          # this file — central memory
+│   ├── Dockerfile        # python:3.13-slim + Uvicorn :8010
+│   ├── docker-entrypoint.sh  # wait-for-pg → alembic upgrade head → uvicorn
+│   ├── .dockerignore
+│   ├── .env.example      # copy to .env (NEVER commit .env)
+│   ├── .gitignore
+│   ├── requirements.txt  # incl. httpx + PyJWT + passlib (Phase 8 auth)
+│   ├── alembic.ini       # migration config (URL injected by env.py)
+│   ├── alembic/
+│   │   ├── env.py        # async env — reads core.config, imports db.models
+│   │   └── versions/     # head: b3f7c2a91d45 "Address book + order item variants"
+│   ├── main.py           # FastAPI app + CORS + TrafficMiddleware + api_router + redis close
+│   ├── api/
+│   │   ├── deps.py       # get_current_user / get_current_user_or_none (JWT, Phase 8)
+│   │   └── v1/
+│   │       ├── api.py    # master APIRouter (single aggregation point)
+│   │       └── endpoints/
+│   │           ├── auth.py         # POST /auth/request-otp, /auth/verify-otp (Redis rate limits + JWT)
+│   │           ├── upload.py       # POST /upload (multipart → MinIO)
+│   │           ├── categories.py   # GET/POST /categories
+│   │           ├── products.py     # GET /products (?active=), POST /products, GET+PATCH /products/{id}
+│   │           ├── cart.py         # GET /cart, POST /cart/add, PATCH /cart/line, DELETE /cart/remove, /cart/clear (X-Session-Id)
+│   │           ├── promotions.py   # GET/POST /promotions, PATCH/DELETE /{id}, POST /validate
+│   │           ├── orders.py       # POST /orders (checkout + idempotency lock + JWT account binding), GET /orders, GET /orders/{id}, PATCH /{id}/status
+│   │           ├── settings.py     # GET /settings, PATCH /settings (singleton, cache-invalidated)
+│   │           ├── users.py        # GET /users (admin) + /users/me family (JWT) + /users/me/addresses (Phase 7)
+│   │           └── analytics.py    # GET /analytics/sales, /activities, /traffic
+│   ├── core/
+│   │   ├── config.py         # pydantic-settings (env-driven config; + api_ir_*, jwt_*)
+│   │   ├── cache.py          # async Redis client (lazy singleton) — carts + cache + counters + OTP state
+│   │   ├── middleware.py     # TrafficMiddleware — best-effort Redis page-view INCR on GETs (Phase 6)
+│   │   └── pricing.py        # Decimal helpers + FREE_SHIPPING_FROM + DEFAULT_SHIPPING_METHODS
+│   ├── db/
+│   │   ├── database.py       # async engine, session factory, Base, get_db()
+│   │   └── models.py         # User, UserAddress, Category, Product, PromoCode, Order, OrderItem, StoreSettings
+│   ├── schemas/
+│   │   ├── common.py         # shared constraints (ImageHttpUrl)
+│   │   ├── auth.py           # OtpRequestIn/Out, OtpVerifyIn, TokenOut (Phase 8)
+│   │   ├── category.py       # CategoryCreate/Update/Response
+│   │   ├── product.py        # ProductCreate/Update/Response
+│   │   ├── cart.py           # CartAddIn, CartLineOut, CartOut (+ wood_type/color, Phase 7)
+│   │   ├── promotion.py      # PromoCreate/Update/Response, PromoValidateIn/Out
+│   │   ├── order.py          # CustomerIn (+ address_id), OrderCreateIn, OrderOut, to_order_out()
+│   │   ├── settings.py       # StoreSettingsOut, StoreSettingsUpdate, ShippingMethodIn/Out
+│   │   ├── user.py           # UserResponse (admin) + UserMe* + MyOrder* + UserAddress* (Phase 7)
+│   │   └── analytics.py      # SalesDayOut, TrafficDayOut, ActivityFeedOut (FeedOrder/User/Stock)
+│   ├── scripts/
+│   │   └── seed.py           # Great Seed — mock catalog → Postgres + MinIO (idempotent)
+│   └── services/
+│       ├── sms.py            # api.ir SmsOTP/CallOTP via httpx (Phase 8)
+│       ├── storage.py        # MediaStorage — async MinIO uploads (aioboto3)
+│       ├── errors.py         # CheckoutError base (shared, avoids import cycles)
+│       ├── cart.py           # Redis cart (WATCH/MULTI, TTL 14d, qty cap 20, variants)
+│       ├── promotion.py      # assert_redeemable + calc_discount (single source)
+│       ├── settings.py       # StoreSettingsData/PricingRules — Redis-cached singleton
+│       ├── lock.py           # CheckoutLock — Redis SETNX 10s TTL double-submit guard
+│       └── order.py          # place_order — atomic checkout (address resolve + variants)
+└── frontend/
+    ├── Dockerfile        # bun build (NITRO_PRESET=node-server) → node:22-alpine :8080
+    ├── .dockerignore
+    └── src/              # TanStack Start storefront + admin (see Phase 5–8 notes)
 ```
 
-Planned for later phases: auth/OTP user endpoints, Redis read-caching for
-hot catalog endpoints, payment gateway integration, `workers/`.
+Planned for later phases: Redis read-caching for hot catalog endpoints,
+payment gateway integration, `workers/`.
 
 ---
 
@@ -575,30 +692,52 @@ hot catalog endpoints, payment gateway integration, `workers/`.
    fall back to defaults (real bug found in Phase 2).
 7. New models must be importable from `alembic/env.py` (it imports
    `db.models`) for autogenerate to see them.
-8. Keep this file current whenever any of the above changes.
+8. **Auth is JWT-only (Phase 8)** — protected routes take
+   `user: User = Depends(get_current_user)` (or `..._or_none` for
+   guest-tolerant flows); never trust client-sent identity (the old
+   `X-User-Phone` header bridge is removed). OTP state lives in Redis
+   only (`otp:code/otp:fails/otp:reqs:{phone}`) with the limits in
+   `endpoints/auth.py` — do not weaken them (cost/security).
+9. Keep this file current whenever any of the above changes.
 
 ---
 
-## 7. How to Run (dev, Windows)
+## 7. How to Run
+
+### Docker (primary — local or VPS, from the repo root)
+
+```powershell
+cd C:\Users\USER\Desktop\site
+Copy-Item .env.example .env      # then set strong secrets (+ API_IR_TOKEN, JWT_SECRET)
+docker compose up -d --build     # 5 containers, health-gated; backend auto-runs alembic
+docker compose exec backend python scripts/seed.py   # first run only (idempotent)
+```
+
+- Storefront `http://localhost:8080` · API `http://localhost:8010/api/v1` ·
+  Swagger `http://localhost:8010/docs` · MinIO console `:9001`.
+- Backend container entrypoint: wait-for-pg → `alembic upgrade head` →
+  Uvicorn. The backend container mounts `./frontend/src/assets`
+  (`/frontend/src/assets:ro`) so `scripts/seed.py` can read the catalog
+  images. Recreate after compose changes: `docker compose up -d --build backend`.
+- **Trap (this machine):** a stray host process can still own
+  `127.0.0.1:8010`/`:8080` (e.g. an old dev uvicorn / Adobe Connect) and
+  silently answer loopback traffic instead of the container — verify with
+  `Get-NetTCPConnection -LocalPort 8010` if "stale code" appears.
+- **Env note:** `scripts\seed.py` reconfigures stdio to UTF-8 (Persian
+  logs on the cp1252 console) and is idempotent.
+
+### Backend-only dev (Windows, pre-Docker legacy)
 
 ```powershell
 cd backend
 Copy-Item .env.example .env      # then set strong secrets
-docker compose up -d             # postgres + redis + minio
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-alembic upgrade head             # apply migrations (head: 7c1b4e9d2a53)
+alembic upgrade head             # apply migrations (head: b3f7c2a91d45)
 scripts\seed.py                  # optional: seed the catalog (idempotent)
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8010
 ```
-
-- API + OpenAPI docs: `http://localhost:8000/docs`
-- MinIO console: `http://localhost:9001`
-- **Env note (this machine):** port 8000 is occupied by an unrelated local
-  service — for live testing use `--port 8010`. `scripts\seed.py` must be
-  run from the `backend/` root (it resolves `.env` from the CWD) and reconfigures
-  stdio to UTF-8 so Persian progress logs don't crash the cp1252 console.
 
 ---
 
@@ -627,9 +766,9 @@ contract the (now live-wired) frontend follows — keep these shapes:
    the threshold (the mock rejects on apply and auto-drops the code if
    the cart shrinks under it).
 5. **Comprehensive user profile** — `users.province / city / zip_code /
-   address` (nullable VARCHARs). The mock prefills checkout from these
-   fields (matched by phone) and writes them back on order placement;
-   the admin user sheet reads them.
+   address` (nullable VARCHARs). *(Phase 7 superseded: these flat columns
+   were dropped in favor of the `user_addresses` book — see Phase 7; the
+   admin board still surfaces each user's default address.)*
 
 Frontend state (end of Phase 5): wired to this API (see the Phase 5
 section above); `bun x tsc --noEmit` clean and `bun run build` passes

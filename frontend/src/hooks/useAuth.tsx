@@ -2,7 +2,20 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 export type UserRole = "admin" | "customer";
 
-type User = { id: string; email?: string; phone?: string; role?: UserRole } | null;
+/**
+ * The locally persisted auth record. `token` is the JWT issued by
+ * `POST /auth/verify-otp` (secure OTP via the api.ir gateway); `phone`
+ * mirrors the token's phone claim and is used to gate auth-only queries.
+ */
+export type AuthUser = {
+  id: string;
+  email?: string;
+  phone?: string;
+  role?: UserRole;
+  token?: string;
+};
+
+type User = AuthUser | null;
 
 type AuthValue = {
   user: User;
@@ -23,12 +36,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
-        setUser(JSON.parse(raw));
+        const parsed = JSON.parse(raw) as User;
+        // A record without a token is a leftover from the old mock login —
+        // it no longer grants anything server-side, so drop it.
+        if (parsed && typeof parsed.token === "string" && parsed.token !== "") {
+          setUser(parsed);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
       } catch {
         localStorage.removeItem(STORAGE_KEY);
       }
     }
     setIsLoading(false);
+  }, []);
+
+  // The axios client fires `hc:auth-expired` when a protected call returns
+  // 401 (token expired/invalid) after clearing the storage record.
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener("hc:auth-expired", onExpired);
+    return () => window.removeEventListener("hc:auth-expired", onExpired);
   }, []);
 
   const login = (u: NonNullable<User>) => {

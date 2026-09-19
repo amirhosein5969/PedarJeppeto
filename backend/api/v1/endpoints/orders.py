@@ -1,15 +1,14 @@
 """Order endpoints (Phase 4) — checkout + admin order management."""
 
-import re
-
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.deps import get_current_user_or_none
 from db.database import get_db
-from db.models import Order, OrderItem
-from schemas.order import OrderCreateIn, OrderOut, OrderStatusIn, canonical_phone, to_order_out
+from db.models import Order, OrderItem, User
+from schemas.order import OrderCreateIn, OrderOut, OrderStatusIn, to_order_out
 from services.cart import InvalidSessionError, cart_service
 from services.lock import checkout_lock
 from services.order import CheckoutError, place_order
@@ -20,17 +19,6 @@ _ORDER_LOAD_OPTIONS = (
     selectinload(Order.user),
     selectinload(Order.items).selectinload(OrderItem.product),
 )
-
-# Mirrors schemas.order._CANONICAL_PHONE_RE (kept private there).
-_CANONICAL_PHONE_RE = re.compile(r"^09\d{9}$")
-
-
-def _account_phone(raw: str | None) -> str | None:
-    """Normalize the logged-in phone (X-User-Phone bridge) or return None."""
-    if not raw:
-        return None
-    phone = canonical_phone(raw)
-    return phone if _CANONICAL_PHONE_RE.match(phone) else None
 
 
 def _require_session(session_id: str) -> str:
@@ -53,13 +41,14 @@ async def create_order(
     session_id: str = Header(..., alias="X-Session-Id"),
     # Optional client-supplied idempotency key; defaults to the cart session.
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
-    # Phase 6 identity bridge: the logged-in customer's phone (mock OTP).
-    # When present, the order is bound to THIS account, not the receiver.
-    x_user_phone: str | None = Header(None, alias="X-User-Phone"),
+    # Secure OTP auth: when a valid JWT is present, the order is bound to
+    # THIS account, not the receiver. Guests (no token) check out too —
+    # the order then binds to the receiver's phone.
+    current_user: User | None = Depends(get_current_user_or_none),
     db: AsyncSession = Depends(get_db),
 ) -> OrderOut:
     _require_session(session_id)
-    account_phone = _account_phone(x_user_phone)
+    account_phone = current_user.phone if current_user is not None else None
     # Distributed lock: reject a concurrent checkout of the same cart (or the
     # same explicit idempotency key) immediately, before any work is done.
     lock_id = (idempotency_key or session_id).strip()

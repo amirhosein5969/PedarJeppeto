@@ -7,6 +7,7 @@ from fastapi import APIRouter
 
 from api.v1.endpoints import (
     analytics,
+    auth,
     cart,
     categories,
     orders,
@@ -18,6 +19,7 @@ from api.v1.endpoints import (
 )
 
 api_router = APIRouter()
+api_router.include_router(auth.router)
 api_router.include_router(upload.router)
 api_router.include_router(categories.router)
 api_router.include_router(products.router)

@@ -658,7 +658,7 @@ export function usePlaceOrder(): UseMutationResult<ApiOrder, ApiError, CheckoutI
       // admin order board.
       void qc.invalidateQueries({ queryKey: queryKeys.cart });
       void qc.invalidateQueries({ queryKey: queryKeys.orders });
-      // The order now belongs to the logged-in account (X-User-Phone) — refresh
+      // The order now belongs to the logged-in account (JWT auth) — refresh
       // the customer portal so "My Orders" shows it immediately, plus the
       // address book (a new address may have been auto-saved) + the admin board.
       void qc.invalidateQueries({ queryKey: queryKeys.meOrders });

@@ -1,27 +1,24 @@
-"""User (customer) endpoints (Phase 5 board + Phase 6 customer portal).
+"""User (customer) endpoints (Phase 5 board + customer portal).
 
 * Admin read-only board: ``GET /users`` (customers are created/updated at
   checkout; role/block mutations are intentionally not exposed).
 * Customer portal: the ``/users/me`` family for the logged-in customer's
   own profile + order history.
 
-Phase 6 identity bridge (documented): real token/JWT auth does not exist
-yet — the storefront's mock OTP login stores the customer's phone client-side
-and the axios interceptor ships it as the ``X-User-Phone`` header. The
-``/me`` routes resolve the :class:`User` by canonical phone. When real auth
-lands, only this header dependency changes.
+Identity: the ``/me`` routes are protected by the JWT issued by
+``/auth/verify-otp`` (secure OTP via the api.ir gateway) — see
+``api.deps.get_current_user``. The old ``X-User-Phone`` mock bridge is
+gone; a valid Bearer token is the only way in.
 """
 
-import re
-
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.deps import get_current_user
 from db.database import get_db
-from db.models import Order, OrderItem, OrderStatus, User, UserAddress, UserRole
-from schemas.order import canonical_phone
+from db.models import Order, OrderItem, OrderStatus, User, UserAddress
 from schemas.user import (
     MyOrderItemOut,
     MyOrderOut,
@@ -34,40 +31,6 @@ from schemas.user import (
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-# Mirrors schemas.order._CANONICAL_PHONE_RE (kept private there).
-_CANONICAL_PHONE_RE = re.compile(r"^09\d{9}$")
-
-_UNAUTHED = "برای مشاهده‌ی حساب کاربری ابتدا وارد شوید."
-_NOT_FOUND = "حساب کاربری یافت نشد."
-
-
-def user_phone(
-    x_user_phone: str | None = Header(default=None, alias="X-User-Phone"),
-) -> str | None:
-    """FastAPI dependency: the logged-in phone (Phase 6 mock-auth bridge).
-
-    Returns the canonical ``09xxxxxxxxx`` form, or ``None`` when the header
-    is absent/invalid — the routes map that to 401.
-    """
-    if not x_user_phone:
-        return None
-    phone = canonical_phone(x_user_phone)
-    return phone if _CANONICAL_PHONE_RE.match(phone) else None
-
-
-async def _get_user_by_phone(
-    db: AsyncSession, phone: str | None
-) -> User | None:
-    if not phone:
-        return None
-    result = await db.execute(select(User).where(User.phone == phone))
-    return result.scalar_one_or_none()
-
-
-async def _require_phone(phone: str | None) -> None:
-    if not phone:
-        raise HTTPException(status_code=401, detail=_UNAUTHED)
 
 
 @router.get("", response_model=list[UserResponse], summary="List all users (admin)")
@@ -124,16 +87,8 @@ async def list_users(db: AsyncSession = Depends(get_db)) -> list[UserResponse]:
     response_model=UserMeOut,
     summary="The logged-in customer's profile",
 )
-async def get_me(
-    db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
-) -> UserMeOut:
-    await _require_phone(phone)
-    user = await _get_user_by_phone(db, phone)
-    if user is None:
-        # Logged in (mock OTP) but never placed an order & never saved the
-        # profile yet — the client renders an empty form for this case.
-        raise HTTPException(status_code=404, detail=_NOT_FOUND)
+async def get_me(user: User = Depends(get_current_user)) -> UserMeOut:
+    # The account row is guaranteed: /auth/verify-otp creates it.
     return UserMeOut.model_validate(user)
 
 
@@ -145,21 +100,9 @@ async def get_me(
 async def update_me(
     payload: UserMeUpdate,
     db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
+    user: User = Depends(get_current_user),
 ) -> UserMeOut:
-    await _require_phone(phone)
     updates = payload.model_dump(exclude_unset=True)
-
-    user = await _get_user_by_phone(db, phone)
-    if user is None:
-        # First save from the portal: create the account row (the phone is
-        # already verified client-side by the mock OTP flow).
-        user = User(
-            phone=phone,
-            full_name=updates.pop("full_name", None) or "مشتری چوب‌کار",
-            role=UserRole.customer,
-        )
-        db.add(user)
     for field, value in updates.items():
         setattr(user, field, value)
 
@@ -175,16 +118,8 @@ async def update_me(
 )
 async def my_orders(
     db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
+    user: User = Depends(get_current_user),
 ) -> list[MyOrderOut]:
-    await _require_phone(phone)
-    user = await _get_user_by_phone(db, phone)
-    # A logged-in customer without an account row simply has no history yet
-    # (orders FK to users) — return an empty list, not a 404, so the portal
-    # renders its "no orders yet" state.
-    if user is None:
-        return []
-
     result = await db.execute(
         select(Order)
         .options(selectinload(Order.items).selectinload(OrderItem.product))
@@ -218,19 +153,6 @@ async def my_orders(
 # =============================================================================
 
 
-async def _me_user(db: AsyncSession, phone: str | None) -> User | None:
-    """Resolve the logged-in user (401 when not authenticated), or None."""
-    await _require_phone(phone)
-    return await _get_user_by_phone(db, phone)
-
-
-async def _me_or_404(db: AsyncSession, phone: str | None) -> User:
-    user = await _me_user(db, phone)
-    if user is None:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND)
-    return user
-
-
 async def _owned_address(db: AsyncSession, user: User, address_id: int) -> UserAddress:
     result = await db.execute(select(UserAddress).where(UserAddress.id == address_id))
     addr = result.scalar_one_or_none()
@@ -255,11 +177,8 @@ async def _list_addresses(db: AsyncSession, user: User) -> list[UserAddress]:
 )
 async def my_addresses(
     db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
+    user: User = Depends(get_current_user),
 ) -> list[UserAddressOut]:
-    user = await _me_user(db, phone)
-    if user is None:
-        return []
     return [UserAddressOut.model_validate(a) for a in await _list_addresses(db, user)]
 
 
@@ -272,16 +191,8 @@ async def my_addresses(
 async def create_address(
     payload: UserAddressIn,
     db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
+    user: User = Depends(get_current_user),
 ) -> UserAddressOut:
-    user = await _me_user(db, phone)
-    if user is None:
-        # First interaction from a brand-new account: create the row, then the
-        # address (the account's first address becomes the default).
-        user = User(phone=phone, full_name="مشتری چوب‌کار", role=UserRole.customer)
-        db.add(user)
-        await db.flush()
-
     existing = await _list_addresses(db, user)
     is_default = payload.is_default or not existing
     addr = UserAddress(
@@ -315,9 +226,8 @@ async def update_address(
     address_id: int,
     payload: UserAddressUpdate,
     db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
+    user: User = Depends(get_current_user),
 ) -> UserAddressOut:
-    user = await _me_or_404(db, phone)
     addr = await _owned_address(db, user, address_id)
     updates = payload.model_dump(exclude_unset=True)
     is_default_set = updates.get("is_default")
@@ -341,9 +251,8 @@ async def update_address(
 async def delete_address(
     address_id: int,
     db: AsyncSession = Depends(get_db),
-    phone: str | None = Depends(user_phone),
+    user: User = Depends(get_current_user),
 ) -> dict:
-    user = await _me_or_404(db, phone)
     addr = await _owned_address(db, user, address_id)
     was_default = addr.is_default
     # If we're deleting the default, promote the next-lowest-id address.

@@ -62,6 +62,18 @@ class Settings(BaseSettings):
     # URLs are derived from the MinIO endpoint: {s3_endpoint_url}/{s3_bucket}.
     media_public_base_url: str = ""
 
+    # --- OTP / SMS gateway (api.ir) ------------------------------------------
+    # Bearer token for https://s.api.ir (SmsOTP / CallOTP). Empty = the
+    # gateway is not configured; /auth/request-otp answers 503 and never
+    # touches the provider (zero cost).
+    api_ir_token: str = ""
+    api_ir_base_url: str = "https://s.api.ir/api/sw1"
+
+    # --- JWT (secure OTP auth) -------------------------------------------------
+    jwt_secret: str = "dev-insecure-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24
+
     # --- Derived connection URLs -----------------------------------------
     @property
     def database_url(self) -> str:

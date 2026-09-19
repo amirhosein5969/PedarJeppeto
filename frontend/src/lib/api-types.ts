@@ -251,6 +251,38 @@ export interface ApiMe {
   created_at: string;
 }
 
+// =============================================================================
+// Secure OTP authentication (api.ir gateway + JWT)
+// =============================================================================
+
+/** POST /auth/request-otp — dispatch a 5-digit OTP. */
+export interface ApiOtpRequest {
+  phone: string;
+  method: "sms" | "call";
+}
+
+/** Response of POST /auth/request-otp. */
+export interface ApiOtpSent {
+  sent: boolean;
+  method: "sms" | "call";
+  ttl_seconds: number;
+}
+
+/** POST /auth/verify-otp — check the OTP. */
+export interface ApiOtpVerify {
+  phone: string;
+  code: string;
+}
+
+/** Response of POST /auth/verify-otp — the JWT access token. */
+export interface ApiAuthToken {
+  access_token: string;
+  token_type: string;
+  phone: string;
+  role: "admin" | "customer";
+  expires_in: number;
+}
+
 /** PATCH /users/me — partial profile update (null clears, omit keeps). */
 export interface ApiMeUpdate {
   full_name?: string | null;

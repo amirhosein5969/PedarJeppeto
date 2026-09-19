@@ -58,25 +58,45 @@ function getSessionId(): string {
   return id;
 }
 
-/**
- * The logged-in customer's phone (Phase 6 mock-auth bridge). The mock OTP
- * login (`src/routes/auth.tsx` → `useAuth`) persists `{ phone, ... }` in
- * localStorage; we read it back here and ship it as the `X-User-Phone`
- * header so the backend can resolve the caller for `/users/me`. Replaced by
- * a real token when real auth lands.
- */
-export function getAuthPhone(): string | null {
+/** Read one field of the persisted auth record (`useAuth`'s storage). */
+function readAuthField(field: "phone" | "token"): string | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { phone?: unknown } | null;
-    return typeof parsed?.phone === "string" && parsed.phone !== ""
-      ? parsed.phone
-      : null;
+    const parsed = JSON.parse(raw) as Record<string, unknown> | null;
+    const value = parsed?.[field];
+    return typeof value === "string" && value !== "" ? value : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * The logged-in customer's phone (from the secure OTP login). Used to gate
+ * the auth-only queries so SSR (no localStorage) never fires a 401.
+ */
+export function getAuthPhone(): string | null {
+  return readAuthField("phone");
+}
+
+/** The JWT access token issued by `POST /auth/verify-otp`, or null. */
+export function getAuthToken(): string | null {
+  return readAuthField("token");
+}
+
+/**
+ * Clear the auth record and tell the `useAuth` provider to drop its state.
+ * Fired when a protected call answers 401 (expired/invalid token).
+ */
+function clearAuthSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // Non-fatal.
+  }
+  window.dispatchEvent(new Event("hc:auth-expired"));
 }
 
 /** Normalized API error — `status` 0 means network/timeout (no response). */
@@ -111,25 +131,31 @@ export const api = axios.create({
   timeout: 15_000,
 });
 
-// Attach the cart session + the logged-in phone to every outgoing request
-// (client-side only). The phone addresses the /users/me identity bridge.
+// Attach the cart session + the JWT (secure OTP auth) to every outgoing
+// request (client-side only).
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     config.headers.set("X-Session-Id", getSessionId());
-    const phone = getAuthPhone();
-    if (phone) config.headers.set("X-User-Phone", phone);
+    const token = getAuthToken();
+    if (token) config.headers.set("Authorization", `Bearer ${token}`);
   }
   return config;
 });
 
 // Normalize failures into ApiError (message already Persian-safe on the UI
-// side — detail strings come from the backend).
+// side — detail strings come from the backend). A 401 from a protected
+// /users/me route means the token expired: drop the session and let
+// `useAuth` react via the `hc:auth-expired` event.
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ detail?: unknown }>;
       const status = axiosError.response?.status ?? 0;
+      const requestPath = axiosError.config?.url ?? "";
+      if (status === 401 && requestPath.includes("/users/me")) {
+        clearAuthSession();
+      }
       const message =
         extractDetail(axiosError.response?.data) ??
         (status === 0 ? "اتصال به سرور برقرار نشد؛ اتصال اینترنت را بررسی کنید." : axiosError.message);

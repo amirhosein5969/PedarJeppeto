@@ -4,7 +4,7 @@ export type UserRole = "admin" | "customer";
 
 /**
  * The locally persisted auth record. `token` is the JWT issued by
- * `POST /auth/verify-otp` (secure OTP via the api.ir gateway); `phone`
+ * `POST /auth/verify-otp` (secure OTP via the sms.ir gateway); `phone`
  * mirrors the token's phone claim and is used to gate auth-only queries.
  */
 export type AuthUser = {

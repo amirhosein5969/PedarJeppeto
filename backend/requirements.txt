@@ -22,7 +22,7 @@ redis>=5.0,<7.0
 # Object storage (S3 / MinIO), async client
 aioboto3>=13.0,<15.0
 
-# OTP delivery via the api.ir gateway (SMS + Call), async HTTP
+# OTP delivery via the sms.ir gateway (Verify SMS + Call), async HTTP
 httpx>=0.27,<1.0
 
 # Secure OTP auth: JWT access tokens

@@ -134,10 +134,12 @@ services:
       MEDIA_PUBLIC_URL: ${MEDIA_PUBLIC_URL:-http://localhost:9000}
       # --- CORS: JSON list of allowed browser origins ---
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:8080"]}
-      # --- Secure OTP auth: api.ir gateway + JWT ---
-      # Empty API_IR_TOKEN => /auth/request-otp answers 503 and never calls
-      # the paid provider (zero cost until the token is configured).
-      API_IR_TOKEN: ${API_IR_TOKEN:-}
+      # --- Secure OTP auth: sms.ir gateway + JWT ---
+      # Empty SMS_IR_API_KEY => /auth/request-otp (sms) answers 503 and
+      # never calls the paid provider (zero cost). Call OTP is mocked
+      # server-side for now (sms.ir voice flow pending).
+      SMS_IR_API_KEY: ${SMS_IR_API_KEY:-}
+      SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID:-100000}
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-jwt-secret-change-me}
     ports:
       - "${BACKEND_PORT:-8010}:8010"

@@ -1,9 +1,10 @@
-"""Secure OTP authentication (Phase: api.ir gateway + JWT).
+"""Secure OTP authentication (Phase: sms.ir gateway + JWT).
 
 Flow
 ----
 1. ``POST /auth/request-otp`` — generate a 5-digit code, store it in Redis
-   (TTL 120 s) and dispatch it via the api.ir gateway (SMS or IVR Call).
+   (TTL 120 s) and dispatch it via the sms.ir Verify API (SMS) or the
+   (currently mocked) IVR call path.
 2. ``POST /auth/verify-otp``  — verify the code, find-or-create the
    :class:`User` in Postgres and issue a JWT access token.
 

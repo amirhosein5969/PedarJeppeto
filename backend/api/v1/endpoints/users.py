@@ -6,7 +6,7 @@
   own profile + order history.
 
 Identity: the ``/me`` routes are protected by the JWT issued by
-``/auth/verify-otp`` (secure OTP via the api.ir gateway) — see
+``/auth/verify-otp`` (secure OTP via the sms.ir gateway) — see
 ``api.deps.get_current_user``. The old ``X-User-Phone`` mock bridge is
 gone; a valid Bearer token is the only way in.
 """

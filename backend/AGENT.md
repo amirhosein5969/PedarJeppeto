@@ -30,7 +30,7 @@ The repository is split into two sibling projects:
 | Cache / ephemeral state | **Redis 7** | Hot-read caching + temporary shopping carts |
 | Object storage | **MinIO** (S3-compatible) | Product / wood-grain imagery via **aioboto3** |
 | Configuration | **pydantic-settings** | 12-factor: all config from environment / `.env` |
-| Auth | **PyJWT** + **httpx** (api.ir OTP: SMS/IVR Call) + passlib | Secure OTP login; Redis rate/brute-force limits |
+| Auth | **PyJWT** + **httpx** (sms.ir Verify OTP; Call mocked) + passlib | Secure OTP login; Redis rate/brute-force limits |
 | Runtime | **Docker Compose** (5 services) | Fully containerized monorepo — root `docker-compose.yml` |
 
 ### Service ports (local development)
@@ -543,11 +543,11 @@ cost control (anti SMS-bombing) are the top priorities.** Verified:
 E2E **32/32** (`phase6-otp-test.py`), `tsc --noEmit` clean, Docker
 frontend SSR 200 on `/ /auth /shop /cart /profile/account`.
 
-- **Gateway** — `services/sms.py`: `send_otp_sms` (POST
-  `https://s.api.ir/api/sw1/SmsOTP`, `{"code","mobile","template":1}`)
-  and `send_otp_call` (POST `.../CallOTP`, `{"code","number"}`) via
-  `httpx.AsyncClient` + `Authorization: Bearer {API_IR_TOKEN}`.
-  **Empty `API_IR_TOKEN` → 503 without ever calling the provider (zero
+- **Gateway** — `services/sms.py`: `send_otp_sms` + `send_otp_call` via
+  `httpx.AsyncClient`. *(Migrated in Phase 10: originally the api.ir
+  SmsOTP/CallOTP endpoints with a Bearer token; now the **sms.ir Verify
+  API** with `X-API-KEY` — see Phase 10.)*
+  **Empty gateway key → 503 without ever calling the provider (zero
   cost)**; provider non-2xx/network → 502 and the pending code is
   deleted. `requirements.txt` += `httpx`, `PyJWT`, `passlib`.
 - **`api/v1/endpoints/auth.py`:**
@@ -585,12 +585,12 @@ frontend SSR 200 on `/ /auth /shop /cart /profile/account`.
   `hc:auth-expired`; `useAuth.tsx` drops legacy token-less records and
   listens for the expiry event. `api-types.ts` += `ApiOtpRequest/
   ApiOtpSent/ApiOtpVerify/ApiAuthToken`.
-- **Env:** `API_IR_TOKEN` (empty = 503, zero cost) + `JWT_SECRET`
-  (root `.env` / `.env.example` / compose, `:-` defaults so a missing
-  token never blocks startup).
+- **Env:** gateway key (empty = 503, zero cost — `SMS_IR_API_KEY` since
+  Phase 10) + `JWT_SECRET` (root `.env` / `.env.example` / compose, `:-`
+  defaults so a missing key never blocks startup).
 - **36 endpoints** total under `/api/v1`.
 
-### Phase 9 — Media Public URL + Static Assets ✅ (current)
+### Phase 9 — Media Public URL + Static Assets ✅
 Fixes the two media breakages from the Docker networking transition:
 (1) product/category images stored as `http://minio:9000/...` (an
 internal Docker DNS name browsers can't resolve → `ERR_NAME_NOT_RESOLVED`)
@@ -621,6 +621,35 @@ and (2) storefront imagery not loading.
   `GET /categories` + `/products` serve public URLs; `/hero-workshop.jpg`
   = 200 from the frontend container; SSR 200 on `/ /shop /about`;
   `tsc --noEmit` clean.
+
+### Phase 10 — SMS Provider Migration: api.ir → sms.ir ✅ (current)
+The OTP SMS provider moved from api.ir to **sms.ir**. The auth contract
+(`/auth/request-otp` `method: "sms"|"call"`, Redis rate limits, 120 s
+code TTL, JWT) and the entire frontend UX (120 s countdown, two resend
+buttons, 429/brute-force lock, toasts) are **unchanged**.
+
+- **`core/config.py`** — `api_ir_token`/`api_ir_base_url` removed;
+  added `sms_ir_api_key: str = ""` (env `SMS_IR_API_KEY`) and
+  `sms_ir_template_id: int = 100000` (env `SMS_IR_TEMPLATE_ID`).
+- **`services/sms.py`** — `send_otp_sms` now POSTs
+  `https://api.sms.ir/v1/send/verify` with headers
+  `{"X-API-KEY": sms_ir_api_key, "Accept": "application/json"}` and body
+  `{"mobile", "templateId": sms_ir_template_id, "parameters":
+  [{"name": "CODE", "value": code}]}`. Empty key →
+  `SmsNotConfiguredError` → **503 before any provider call** (unchanged);
+  non-2xx/network → `SmsError` → 502 + code deleted (unchanged).
+  `send_otp_call` keeps its signature but is **mocked**: logs the request
+  via `logging` and returns success (sms.ir's voice flow is a separate
+  product and is pending integration) — the "دریافت کد از طریق تماس"
+  button still works end-to-end against the Redis/JWT flow.
+- **Env** — root `.env` / `.env.example` / `docker-compose.yml`:
+  `API_IR_TOKEN` → `SMS_IR_API_KEY` (+ `SMS_IR_TEMPLATE_ID`, default
+  100000). `JWT_SECRET` untouched.
+- Verified: `py_compile` clean; backend rebuilt + recreated;
+  `request-otp` with empty key → **503**; `request-otp` `method:"call"`
+  → 200 (mock logged) + code verifiable → JWT (full mock-call flow);
+  bogus key against the real endpoint → provider 401 → **502** + code
+  deleted (error path confirmed against `api.sms.ir`).
 
 ---
 
@@ -666,7 +695,7 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 │   │           ├── users.py        # GET /users (admin) + /users/me family (JWT) + /users/me/addresses (Phase 7)
 │   │           └── analytics.py    # GET /analytics/sales, /activities, /traffic
 │   ├── core/
-│   │   ├── config.py         # pydantic-settings (env-driven config; + api_ir_*, jwt_*, media_public_url)
+│   │   ├── config.py         # pydantic-settings (env-driven config; + sms_ir_*, jwt_*, media_public_url)
 │   │   ├── cache.py          # async Redis client (lazy singleton) — carts + cache + counters + OTP state
 │   │   ├── middleware.py     # TrafficMiddleware — best-effort Redis page-view INCR on GETs (Phase 6)
 │   │   └── pricing.py        # Decimal helpers + FREE_SHIPPING_FROM + DEFAULT_SHIPPING_METHODS
@@ -688,7 +717,7 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 │   │   ├── seed.py           # Great Seed — mock catalog → Postgres + MinIO (idempotent; assets from frontend/public)
 │   │   └── fix_urls.py       # one-shot: internal minio:9000 URLs → public host (Phase 9)
 │   └── services/
-│       ├── sms.py            # api.ir SmsOTP/CallOTP via httpx (Phase 8)
+│       ├── sms.py            # sms.ir Verify OTP via httpx; Call mocked (Phase 8/10)
 │       ├── storage.py        # MediaStorage — async MinIO uploads; public URLs via MEDIA_PUBLIC_URL
 │       ├── errors.py         # CheckoutError base (shared, avoids import cycles)
 │       ├── cart.py           # Redis cart (WATCH/MULTI, TTL 14d, qty cap 20, variants)
@@ -742,7 +771,7 @@ payment gateway integration, `workers/`.
 
 ```powershell
 cd C:\Users\USER\Desktop\site
-Copy-Item .env.example .env      # then set strong secrets (+ API_IR_TOKEN, JWT_SECRET)
+Copy-Item .env.example .env      # then set strong secrets (+ SMS_IR_API_KEY, JWT_SECRET)
 docker compose up -d --build     # 5 containers, health-gated; backend auto-runs alembic
 docker compose exec backend python scripts/seed.py   # first run only (idempotent)
 ```

@@ -1,4 +1,4 @@
-"""Secure OTP authentication schemas (api.ir gateway + JWT)."""
+"""Secure OTP authentication schemas (sms.ir gateway + JWT)."""
 
 from __future__ import annotations
 

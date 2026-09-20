@@ -252,7 +252,7 @@ export interface ApiMe {
 }
 
 // =============================================================================
-// Secure OTP authentication (api.ir gateway + JWT)
+// Secure OTP authentication (sms.ir gateway + JWT)
 // =============================================================================
 
 /** POST /auth/request-otp — dispatch a 5-digit OTP. */

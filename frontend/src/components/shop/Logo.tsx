@@ -18,8 +18,8 @@ export function Logo({ size = 100, glow = true }: { size?: number; glow?: boolea
           className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
             // سایز هاله نور را کمی پهن‌تر کردیم
-            width: size * 2.1, 
-            height: size * 2.1,
+            width: size * 1.8, 
+            height: size * 1.8,
             // رنگ را به طلاییِ کهربایی تغییر دادیم و شفافیت (Opacity) را از 0.15 به 0.35 رساندیم تا قشنگ دیده شود
             background:
               "radial-gradient(circle, rgba(234, 167, 74, 0.05) 0%, rgba(0,0,0,0) 75%)",

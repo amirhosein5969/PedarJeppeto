@@ -13,8 +13,8 @@ export const Route = createFileRoute("/profile/orders")({
   component: ProfileOrders,
   head: () => ({
     meta: [
-      { title: "تاریخچه سفارشات | چوب‌کار" },
-      { name: "description", content: "پیگیری سفارش‌های خود در فروشگاه چوب‌کار." },
+      { title: "تاریخچه سفارشات | پدر ژپتو" },
+      { name: "description", content: "پیگیری سفارش‌های خود در فروشگاه پدر ژپتو." },
     ],
   }),
 });

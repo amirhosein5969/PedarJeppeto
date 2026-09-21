@@ -34,7 +34,7 @@ const defaultHeroImg = "/hero-workshop.jpg";
 export const Route = createFileRoute("/admin/storefront")({
   component: AdminStorefront,
   head: () => ({
-    meta: [{ title: "اسلایدر صفحه‌ی نخست | چوب‌کار" }],
+    meta: [{ title: "اسلایدر صفحه‌ی نخست | پدر ژپتو" }],
   }),
 });
 
@@ -329,7 +329,7 @@ function AdminStorefront() {
                       id="hero-tag"
                       value={selected.tag}
                       onChange={(e) => updateSelected({ tag: e.target.value })}
-                      placeholder="مثلاً کارگاه چوب‌کار"
+                      placeholder="مثلاً کارگاه پدر ژپتو"
                       className="border-white/10 bg-[#1c1916] placeholder:text-muted-foreground/40 focus-visible:border-primary/50 focus-visible:ring-primary/25"
                     />
                   </div>

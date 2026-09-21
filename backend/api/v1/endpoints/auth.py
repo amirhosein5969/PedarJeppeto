@@ -181,7 +181,7 @@ async def verify_otp(
     result = await db.execute(select(User).where(User.phone == phone))
     user = result.scalar_one_or_none()
     if user is None:
-        user = User(phone=phone, full_name="مشتری چوب‌کار", role=UserRole.customer)
+        user = User(phone=phone, full_name="مشتری پدر ژپتو", role=UserRole.customer)
         db.add(user)
         await db.commit()
         await db.refresh(user)

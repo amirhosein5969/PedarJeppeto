@@ -13,12 +13,12 @@ export const Route = createFileRoute("/shop")({
   }),
   head: () => ({
     meta: [
-      { title: "فروشگاه محصولات چوبی دست‌ساز | چوب‌کار" },
+      { title: "فروشگاه محصولات چوبی دست‌ساز | پدر ژپتو" },
       {
         name: "description",
-        content: "همه‌ی محصولات چوبی دست‌ساز چوب‌کار در چهار دسته‌بندی، با فیلتر و جستجو.",
+        content: "همه‌ی محصولات چوبی دست‌ساز پدر ژپتو در چهار دسته‌بندی، با فیلتر و جستجو.",
       },
-      { property: "og:title", content: "فروشگاه محصولات چوبی دست‌ساز | چوب‌کار" },
+      { property: "og:title", content: "فروشگاه محصولات چوبی دست‌ساز | پدر ژپتو" },
       { property: "og:description", content: "ظروف، دکوری، لوازم دیجیتال و کادویی چوبی." },
     ],
   }),
@@ -41,7 +41,7 @@ function Shop() {
       <SectionHeader
         as="h1"
         title="فروشگاه"
-        subtitle={q ? `نتیجه جستجو برای «${q}»` : "همه‌ی محصولات دست‌ساز کارگاه چوب‌کار"}
+        subtitle={q ? `نتیجه جستجو برای «${q}»` : "همه‌ی محصولات دست‌ساز کارگاه پدر ژپتو"}
       />
 
       <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto border-b border-border pb-3">

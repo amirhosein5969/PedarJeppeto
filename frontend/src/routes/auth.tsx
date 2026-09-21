@@ -20,10 +20,10 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "ورود و ثبت‌نام | چوب‌کار" },
-      { name: "description", content: "ورود به حساب کاربری فروشگاه چوبی دست‌ساز چوب‌کار." },
-      { property: "og:title", content: "ورود و ثبت‌نام | چوب‌کار" },
-      { property: "og:description", content: "حساب کاربری فروشگاه چوب‌کار." },
+      { title: "ورود و ثبت‌نام | پدر ژپتو" },
+      { name: "description", content: "ورود به حساب کاربری فروشگاه چوبی دست‌ساز پدر ژپتو." },
+      { property: "og:title", content: "ورود و ثبت‌نام | پدر ژپتو" },
+      { property: "og:description", content: "حساب کاربری فروشگاه پدر ژپتو." },
     ],
   }),
   component: Auth,

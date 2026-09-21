@@ -22,10 +22,10 @@ import { Loader2 } from "lucide-react";
 export const Route = createFileRoute("/cart")({
   head: () => ({
     meta: [
-      { title: "سبد خرید | چوب‌کار" },
+      { title: "سبد خرید | پدر ژپتو" },
       { name: "description", content: "مرور محصولات چوبی انتخاب‌شده و مبلغ قابل پرداخت." },
-      { property: "og:title", content: "سبد خرید | چوب‌کار" },
-      { property: "og:description", content: "محصولات انتخابی شما در فروشگاه چوب‌کار." },
+      { property: "og:title", content: "سبد خرید | پدر ژپتو" },
+      { property: "og:description", content: "محصولات انتخابی شما در فروشگاه پدر ژپتو." },
     ],
   }),
   component: Cart,

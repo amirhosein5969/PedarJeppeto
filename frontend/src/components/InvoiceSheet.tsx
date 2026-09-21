@@ -176,7 +176,7 @@ export function InvoiceSheet({ order, settings, invoiceNo, issuedOn }: InvoiceSh
         </div>
 
         <p className="mt-6 border-t border-neutral-300 pt-3 text-center text-[10px] text-neutral-500">
-          این صورتحساب به‌صورت خودکار توسط سامانه‌ی فروشگاه «چوب‌کار» صادر شده و حکم فاکتور رسمی
+          این صورتحساب به‌صورت خودکار توسط سامانه‌ی فروشگاه «پدر ژپتو» صادر شده و حکم فاکتور رسمی
           فروش را دارد.
         </p>
       </div>

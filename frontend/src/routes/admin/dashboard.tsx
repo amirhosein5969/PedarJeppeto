@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin/dashboard")({
   component: AdminDashboard,
   head: () => ({
-    meta: [{ title: "پیشخوان مدیریت | چوب‌کار" }],
+    meta: [{ title: "پیشخوان مدیریت | پدر ژپتو" }],
   }),
 });
 
@@ -230,7 +230,7 @@ function AdminDashboard() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-lg font-extrabold tracking-tight text-foreground">پیشخوان مدیریت</h1>
-          <p className="mt-1 text-xs text-muted-foreground">نمای کلی عملکرد فروشگاه چوب‌کار</p>
+          <p className="mt-1 text-xs text-muted-foreground">نمای کلی عملکرد فروشگاه پدر ژپتو</p>
         </div>
         <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary-soft">
           آمار زنده

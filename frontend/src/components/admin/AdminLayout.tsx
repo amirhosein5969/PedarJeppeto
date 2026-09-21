@@ -141,7 +141,7 @@ export function AdminLayout() {
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/5 px-5">
           <Logo size={36} />
           <div>
-            <p className="text-sm font-extrabold text-foreground">چوب‌کار</p>
+            <p className="text-sm font-extrabold text-foreground">پدر ژپتو</p>
             <p className="text-[10px] font-bold text-muted-foreground">پنل مدیریت</p>
           </div>
         </div>
@@ -252,7 +252,7 @@ export function AdminLayout() {
             <Menu className="size-4.5" />
           </Button>
           <nav aria-label=" breadcrumb" className="flex min-w-0 items-center gap-1.5 text-xs">
-            <span className="hidden text-muted-foreground sm:inline">چوب‌کار</span>
+            <span className="hidden text-muted-foreground sm:inline">پدر ژپتو</span>
             <ChevronLeft className="hidden size-3.5 shrink-0 text-muted-foreground/50 sm:inline" />
             <span className="truncate font-extrabold text-foreground">
               {active?.label ?? "پیشخوان"}
@@ -347,7 +347,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
         <div className="flex items-center gap-3">
           <Logo size={44} />
           <div>
-            <h1 className="text-lg font-extrabold text-foreground">پنل مدیریت چوب‌کار</h1>
+            <h1 className="text-lg font-extrabold text-foreground">پنل مدیریت پدر ژپتو</h1>
             <p className="text-xs text-muted-foreground">ورود مخصوص کادر کارگاه</p>
           </div>
         </div>

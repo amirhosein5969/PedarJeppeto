@@ -27,7 +27,7 @@ export type Category = {
  */
 export type DefaultHeroSlide = {
   image: string;
-  /** Tag/badge shown above the title (e.g. "کارگاه چوب‌کار"). */
+  /** Tag/badge shown above the title (e.g. "کارگاه پدر ژپتو"). */
   tag: string;
   title: string;
   /** Supporting line under the title. */
@@ -37,7 +37,7 @@ export type DefaultHeroSlide = {
 export const defaultHeroSlides: DefaultHeroSlide[] = [
   {
     image: heroWorkshopImg,
-    tag: "کارگاه چوب‌کار",
+    tag: "کارگاه پدر ژپتو",
     title: "چوب، دست، و کمی صبر",
     text: "هر قطعه در کارگاه ما دست‌ساز می‌شود — با چوب طبیعی گردو، بلوط و راش و پرداخت روغن خوراکی.",
   },

@@ -31,8 +31,8 @@ export const Route = createFileRoute("/profile/account")({
   component: ProfileAccount,
   head: () => ({
     meta: [
-      { title: "پروفایل من | چوب‌کار" },
-      { name: "description", content: "ویرایش اطلاعات و دفترچه‌ی آدرس‌های حساب کاربری چوب‌کار." },
+      { title: "پروفایل من | پدر ژپتو" },
+      { name: "description", content: "ویرایش اطلاعات و دفترچه‌ی آدرس‌های حساب کاربری پدر ژپتو." },
     ],
   }),
 });

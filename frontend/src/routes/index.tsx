@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/shop/ProductCard";
@@ -15,13 +15,13 @@ const about2 = "/about-2.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "چوب‌کار | فروشگاه محصولات چوبی دست‌ساز" },
+      { title: "پدر ژپتو | فروشگاه محصولات چوبی دست‌ساز" },
       {
         name: "description",
         content:
           "خرید محصولات چوبی دست‌ساز؛ ظروف آشپزخانه، دکوری و اداری، لوازم جانبی دیجیتال و کادویی چوبی با چوب طبیعی گردو، بلوط و راش.",
       },
-      { property: "og:title", content: "چوب‌کار | فروشگاه محصولات چوبی دست‌ساز" },
+      { property: "og:title", content: "پدر ژپتو | فروشگاه محصولات چوبی دست‌ساز" },
       {
         property: "og:description",
         content: "محصولات چوبی دست‌ساز با چوب طبیعی، ساخته‌شده در کارگاه ما.",
@@ -176,7 +176,7 @@ function Home() {
       ) : (
       <ProductRail
         title="پرفروش‌ترین محصولات"
-        subtitle="انتخاب مشتریان چوب‌کار"
+        subtitle="انتخاب مشتریان پدر ژپتو"
         items={bestSellers}
         hideDiscount
       />
@@ -219,7 +219,7 @@ function Home() {
             />
           </div>
           <div className="space-y-5">
-            <SectionHeader title="درباره‌ی چوب‌کار" subtitle="ساخته‌شده با دست، نه با ماشین" />
+            <SectionHeader title="درباره‌ی پدر ژپتو" subtitle="ساخته‌شده با دست، نه با ماشین" />
             <div className="space-y-4 text-sm leading-8 text-muted-foreground">
               <p>
                 ما یک کارگاه کوچک خانوادگی هستیم که از سال ۱۳۹۲، با یک اره‌ی دستی و چند تخته‌ی چوب

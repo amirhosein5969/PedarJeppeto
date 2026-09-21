@@ -105,7 +105,7 @@ export function Header() {
             <Link to="/" className="flex items-center gap-2">
               <Logo size={44} />
               <span className="text-xl font-extrabold tracking-tight text-primary-soft">
-                چوب‌کار
+                پدر ژپتو
               </span>
             </Link>
 

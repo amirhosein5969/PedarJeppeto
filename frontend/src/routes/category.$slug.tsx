@@ -7,9 +7,9 @@ export const Route = createFileRoute("/category/$slug")({
   head: ({ params }) => {
     return {
       meta: [
-        { title: `دسته‌بندی ${params.slug} | چوب‌کار` },
+        { title: `دسته‌بندی ${params.slug} | پدر ژپتو` },
         { name: "description", content: "دسته‌بندی محصولات چوبی دست‌ساز." },
-        { property: "og:title", content: "دسته‌بندی محصولات چوبی دست‌ساز | چوب‌کار" },
+        { property: "og:title", content: "دسته‌بندی محصولات چوبی دست‌ساز | پدر ژپتو" },
         { property: "og:description", content: "دسته‌بندی محصولات چوبی دست‌ساز." },
       ],
     };

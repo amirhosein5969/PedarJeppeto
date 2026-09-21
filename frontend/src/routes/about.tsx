@@ -13,13 +13,13 @@ const giftImg = "/cat-gift.jpg";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "درباره‌ی چوب‌کار | کارگاه محصولات چوبی دست‌ساز" },
+      { title: "درباره‌ی پدر ژپتو | کارگاه محصولات چوبی دست‌ساز" },
       {
         name: "description",
         content:
-          "داستان کارگاه چوب‌کار؛ انتخاب الوار، هنر دست و پرداخت روغن. محصولات چوبی دست‌ساز از چوب طبیعی گردو، بلوط و راش.",
+          "داستان کارگاه پدر ژپتو؛ انتخاب الوار، هنر دست و پرداخت روغن. محصولات چوبی دست‌ساز از چوب طبیعی گردو، بلوط و راش.",
       },
-      { property: "og:title", content: "درباره‌ی چوب‌کار" },
+      { property: "og:title", content: "درباره‌ی پدر ژپتو" },
       { property: "og:description", content: "قصه‌ی چوب، با دست نوشته شده." },
     ],
   }),
@@ -135,7 +135,7 @@ function About() {
       <section className="relative h-[74vh] min-h-[32rem] w-full overflow-hidden">
         <img
           src={heroWorkshop}
-          alt="کارگاه چوب‌کار"
+          alt="کارگاه پدر ژپتو"
           width={1600}
           height={900}
           className="absolute inset-0 size-full object-cover"
@@ -147,7 +147,7 @@ function About() {
           <Reveal>
             <div className="mb-5 h-px w-24 bg-linear-to-l from-primary/90 to-transparent" />
             <p className="text-xs font-bold tracking-[0.35em] text-primary-soft">
-              کارگاه چوب‌کار — از سال ۱۳۹۲
+              کارگاه پدر ژپتو — از سال ۱۳۹۲
             </p>
             <h1 className="mt-5 max-w-3xl text-4xl leading-[1.2] font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
               قصه‌ی چوب،
@@ -175,7 +175,7 @@ function About() {
           <div className="max-w-3xl space-y-7 text-[15px] leading-10 text-muted-foreground">
             <Reveal>
               <p>
-                کارگاه چوب‌کار در بهار ۱۳۹۲، در انتهای کوچه‌ی نجاران و با یک اره‌ی دستی و چند تخته‌ی
+                کارگاه پدر ژپتو در بهار ۱۳۹۲، در انتهای کوچه‌ی نجاران و با یک اره‌ی دستی و چند تخته‌ی
                 چوب گردو شروع شد. پدربزرگم سال‌ها نجار خانه بود و می‌گفت «چوب، آخرین حرفش را با صبر
                 می‌زند.» آن روزها هیچ برنامه‌ی بزرگی نداشتیم؛ فقط یک باور ساده که وسایلی با دست
                 ساخته می‌شوند، روح دارند. هنوز هم همین باور، هر تصمیم کارگاه را هدایت می‌کند و هر
@@ -212,7 +212,7 @@ function About() {
       {/* 3 — The art of craft: staggered, asymmetrical image grid */}
       <section className="grain-panel border-y border-border py-24 sm:py-28">
         <div className="mx-auto w-full max-w-7xl px-4">
-          <SectionHeader title="هنر دست" subtitle="پنج ایستگاه ساخت در کارگاه چوب‌کار" />
+          <SectionHeader title="هنر دست" subtitle="پنج ایستگاه ساخت در کارگاه پدر ژپتو" />
 
           <div className="mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-12">
             {craftStations.map((station, i) => (

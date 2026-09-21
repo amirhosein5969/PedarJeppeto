@@ -4,7 +4,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
   head: () => ({
-    meta: [{ title: "پنل مدیریت | چوب‌کار" }],
+    meta: [{ title: "پنل مدیریت | پدر ژپتو" }],
   }),
   // Mock auth gate placeholder for now: bare /admin lands on the dashboard.
   // (Real auth lands here in a later step.)

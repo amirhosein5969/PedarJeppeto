@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin/promotions")({
   component: AdminPromotions,
   head: () => ({
-    meta: [{ title: "مدیریت تخفیف‌ها | چوب‌کار" }],
+    meta: [{ title: "مدیریت تخفیف‌ها | پدر ژپتو" }],
   }),
 });
 

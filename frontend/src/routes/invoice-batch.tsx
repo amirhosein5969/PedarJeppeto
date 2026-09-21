@@ -33,7 +33,7 @@ export const Route = createFileRoute("/invoice-batch")({
   },
   component: InvoiceBatch,
   head: () => ({
-    meta: [{ title: "چاپ گروهی فاکتورها | چوب‌کار" }],
+    meta: [{ title: "چاپ گروهی فاکتورها | پدر ژپتو" }],
   }),
 });
 

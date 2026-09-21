@@ -83,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "چوب‌کار | محصولات چوبی دست‌ساز" },
+      { title: "پدر ژپتو | محصولات چوبی دست‌ساز" },
       {
         name: "description",
         content: "فروشگاه اینترنتی محصولات چوبی دست‌ساز با چوب طبیعی گردو، بلوط و راش.",

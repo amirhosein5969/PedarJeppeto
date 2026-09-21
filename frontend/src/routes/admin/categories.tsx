@@ -53,7 +53,7 @@ import {
 export const Route = createFileRoute("/admin/categories")({
   component: AdminCategories,
   head: () => ({
-    meta: [{ title: "مدیریت دسته‌بندی‌ها | چوب‌کار" }],
+    meta: [{ title: "مدیریت دسته‌بندی‌ها | پدر ژپتو" }],
   }),
 });
 

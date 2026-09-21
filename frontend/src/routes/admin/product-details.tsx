@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin/product-details")({
   component: ProductDetailsAdmin,
   head: () => ({
-    meta: [{ title: "جزئیات محصولات | چوب‌کار" }],
+    meta: [{ title: "جزئیات محصولات | پدر ژپتو" }],
   }),
 });
 

@@ -29,6 +29,6 @@ export function setAdminSession(active: boolean): void {
 }
 
 export const ADMIN_PROFILE = {
-  name: "مدیر چوب‌کار",
+  name: "مدیر پدر ژپتو",
   phone: "09121112233",
 } as const;

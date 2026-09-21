@@ -19,12 +19,12 @@ const catGiftImg = "/cat-gift.jpg";
 export const Route = createFileRoute("/guide")({
   head: () => ({
     meta: [
-      { title: "راهنمای خرید | چوب‌کار" },
+      { title: "راهنمای خرید | پدر ژپتو" },
       {
         name: "description",
-        content: "روش ثبت سفارش، ارسال، پرداخت و شرایط مرجوعی محصولات چوبی دست‌ساز چوب‌کار.",
+        content: "روش ثبت سفارش، ارسال، پرداخت و شرایط مرجوعی محصولات چوبی دست‌ساز پدر ژپتو.",
       },
-      { property: "og:title", content: "راهنمای خرید | چوب‌کار" },
+      { property: "og:title", content: "راهنمای خرید | پدر ژپتو" },
       { property: "og:description", content: "همه‌چیز درباره سفارش، ارسال و مرجوعی." },
     ],
   }),
@@ -78,7 +78,7 @@ function Guide() {
       <SectionHeader
         as="h1"
         title="راهنمای خرید و نگهداری"
-        subtitle="از انتخاب تا رسیدن بسته‌ی چوبی شما سه قدم بیشتر فاصله نیست — و با چند عادت ساده، محصولات دست‌ساز چوب‌کار نسل‌به‌نسل دوام می‌آورند."
+        subtitle="از انتخاب تا رسیدن بسته‌ی چوبی شما سه قدم بیشتر فاصله نیست — و با چند عادت ساده، محصولات دست‌ساز پدر ژپتو نسل‌به‌نسل دوام می‌آورند."
       />
 
       <section className="mt-10 grid gap-5 md:grid-cols-3">
@@ -154,14 +154,14 @@ function Guide() {
           <div className="relative min-h-64 overflow-hidden sm:min-h-80 lg:min-h-full">
             <img
               src={catGiftImg}
-              alt="بسته‌بندی امضای چوب‌کار"
+              alt="بسته‌بندی امضای پدر ژپتو"
               loading="lazy"
               className="absolute inset-0 size-full object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-[#1c1916]/60 via-transparent to-transparent" />
             <span className="absolute bottom-4 start-4 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-background/60 px-3 py-1.5 text-[11px] font-bold text-primary-soft backdrop-blur">
               <Package size={12} />
-              جعبه چوبی امضای چوب‌کار
+              جعبه چوبی امضای پدر ژپتو
             </span>
           </div>
 
@@ -172,7 +172,7 @@ function Guide() {
               تجربه‌ی جعبه‌گشایی
             </h2>
             <p className="text-sm leading-8 text-muted-foreground">
-              هر قطعه‌ی چوب‌کار مانند یک هدیه‌ی دست‌ساز بسته می‌شود؛ نه فقط تا سالم برسد، که تا
+              هر قطعه‌ی پدر ژپتو مانند یک هدیه‌ی دست‌ساز بسته می‌شود؛ نه فقط تا سالم برسد، که تا
               لحظه‌ی باز کردن جعبه، بخشی از خرید باشد. جعبه‌ی چوبی امضای ما با کاغذ کرافت چندلایه،
               پرکننده‌ی ضدضربه و روبان ابریشمی، قطعه‌تان را برای هر سفر آماده می‌کند — و کارتِ
               دست‌نوشته‌ای که همراهش می‌رسد، از همان روز اول به شما یادآوری می‌کند که چوب، با مراقبت
@@ -180,7 +180,7 @@ function Guide() {
             </p>
             <ul className="space-y-2.5 text-sm text-foreground/90">
               {[
-                "جعبه‌ی چوبی امضای چوب‌کار — دوباره قابل استفاده",
+                "جعبه‌ی چوبی امضای پدر ژپتو — دوباره قابل استفاده",
                 "کاغذ کرافت چندلایه و پرکننده‌ی ضدضربه برای حمل مطمئن",
                 "کارتِ دست‌نوشته همراه با راهنمای نگهداری چوب",
               ].map((line) => (

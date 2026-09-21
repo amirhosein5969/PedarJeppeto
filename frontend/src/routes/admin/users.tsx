@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin/users")({
   component: AdminUsers,
   head: () => ({
-    meta: [{ title: "مدیریت کاربران | چوب‌کار" }],
+    meta: [{ title: "مدیریت کاربران | پدر ژپتو" }],
   }),
 });
 

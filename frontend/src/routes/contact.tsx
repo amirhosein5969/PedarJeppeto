@@ -73,12 +73,12 @@ export const Route = createFileRoute("/contact")({
   }),
   head: () => ({
     meta: [
-      { title: "تماس با چوب‌کار | پاسخگوی سفارش‌های چوبی شما" },
+      { title: "تماس با پدر ژپتو | پاسخگوی سفارش‌های چوبی شما" },
       {
         name: "description",
-        content: "راه‌های ارتباط با کارگاه چوب‌کار: تلفن، ایمیل، آدرس، فرم پیام و پرسش‌های متداول.",
+        content: "راه‌های ارتباط با کارگاه پدر ژپتو: تلفن، ایمیل، آدرس، فرم پیام و پرسش‌های متداول.",
       },
-      { property: "og:title", content: "تماس با چوب‌کار" },
+      { property: "og:title", content: "تماس با پدر ژپتو" },
       { property: "og:description", content: "برای سفارش سفارشی یا سوال، با ما در تماس باشید." },
     ],
   }),
@@ -131,7 +131,7 @@ function Contact() {
       <SectionHeader
         as="h1"
         title="تماس با ما"
-        subtitle="برای سفارش سفارشی یا هر پرسش، با کارگاه چوب‌کار در تماس باشید"
+        subtitle="برای سفارش سفارشی یا هر پرسش، با کارگاه پدر ژپتو در تماس باشید"
       />
       {subject === "bulk" && (
         <p className="mt-3 rounded-xl border border-secondary/60 bg-secondary/20 p-4 text-xs leading-6">

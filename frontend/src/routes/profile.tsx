@@ -22,7 +22,7 @@ export const Route = createFileRoute("/profile")({
     }
   },
   head: () => ({
-    meta: [{ title: "حساب کاربری | چوب‌کار" }],
+    meta: [{ title: "حساب کاربری | پدر ژپتو" }],
   }),
 });
 

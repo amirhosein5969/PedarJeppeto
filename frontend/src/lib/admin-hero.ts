@@ -8,7 +8,7 @@ import { defaultHeroSlides } from "@/lib/shop-data";
 
 export type HeroSlide = {
   id: string;
-  /** Tag/badge shown above the title (e.g. "کارگاه چوب‌کار"). */
+  /** Tag/badge shown above the title (e.g. "کارگاه پدر ژپتو"). */
   tag: string;
   title: string;
   /** Supporting line under the title. */

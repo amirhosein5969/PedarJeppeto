@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 export const Route = createFileRoute("/admin/settings")({
   component: AdminSettings,
   head: () => ({
-    meta: [{ title: "تنظیمات فروشگاه | چوب‌کار" }],
+    meta: [{ title: "تنظیمات فروشگاه | پدر ژپتو" }],
   }),
 });
 

@@ -82,9 +82,9 @@ type CheckoutValues = z.infer<ReturnType<typeof buildCheckoutSchema>>;
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
-      { title: "تکمیل سفارش | چوب‌کار" },
+      { title: "تکمیل سفارش | پدر ژپتو" },
       { name: "description", content: "ثبت اطلاعات ارسال، انتخاب روش ارسال و پرداخت سفارش." },
-      { property: "og:title", content: "تکمیل سفارش | چوب‌کار" },
+      { property: "og:title", content: "تکمیل سفارش | پدر ژپتو" },
       { property: "og:description", content: "یک قدم تا تحویل محصولات چوبی دست‌ساز." },
     ],
   }),
@@ -692,7 +692,7 @@ function Checkout() {
                   <a
                     href="/guide#signature-packaging"
                     target="_blank"
-                    aria-label="معرفی بسته‌بندی امضای چوب‌کار"
+                    aria-label="معرفی بسته‌بندی امضای پدر ژپتو"
                     className="text-muted-foreground/70 transition-colors hover:text-primary-soft"
                   >
                     <Info className="h-4 w-4" />

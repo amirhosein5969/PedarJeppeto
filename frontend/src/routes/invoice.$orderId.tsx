@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/invoice/$orderId")({
   component: InvoicePage,
   head: () => ({
-    meta: [{ title: "صورتحساب فروش کالا و خدمات | چوب‌کار" }],
+    meta: [{ title: "صورتحساب فروش کالا و خدمات | پدر ژپتو" }],
   }),
 });
 

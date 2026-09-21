@@ -39,7 +39,7 @@ export function Footer() {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Logo size={44} />
-            <span className="text-lg font-extrabold text-primary-soft">چوب‌کار</span>
+            <span className="text-lg font-extrabold text-primary-soft">پدر ژپتو</span>
           </div>
           <p className="text-sm leading-7 text-muted-foreground">
             کارگاه کوچک ما از سال ۱۳۹۲ محصولات چوبی دست‌ساز می‌سازد؛ با چوب طبیعی، پرداخت روغن
@@ -86,7 +86,7 @@ export function Footer() {
 
         {/* Workshop contact */}
         <div>
-          <h4 className="mb-4 font-bold text-primary-soft">کارگاه چوب‌کار</h4>
+          <h4 className="mb-4 font-bold text-primary-soft">کارگاه پدر ژپتو</h4>
           <ul className="space-y-4 text-sm text-muted-foreground">
             <li className="flex items-center gap-3">
               <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/5 bg-white/5 text-primary">
@@ -123,7 +123,7 @@ export function Footer() {
 
         {/* Newsletter / workshop club */}
         <div>
-          <h4 className="mb-4 font-bold text-primary-soft">باشگاه مشتریان چوب‌کار</h4>
+          <h4 className="mb-4 font-bold text-primary-soft">باشگاه مشتریان پدر ژپتو</h4>
           <p className="mb-4 text-sm leading-7 text-muted-foreground">
             ایمیل خود را وارد کنید تا از محصولات تازه‌ی کارگاه و کدهای تخفیف اختصاصی باخبر شوید.
           </p>
@@ -155,7 +155,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-white/5 py-5 text-center text-xs text-muted-foreground">
-        تمامی حقوق این وب‌سایت متعلق به چوب‌کار است. © {toFa(1404)}
+        تمامی حقوق این وب‌سایت متعلق به پدر ژپتو است. © {toFa(1404)}
       </div>
     </footer>
   );

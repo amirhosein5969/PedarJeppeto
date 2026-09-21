@@ -20,9 +20,9 @@ import { useCatalog, useSettings } from "@/hooks/queries";
 export const Route = createFileRoute("/product/$id")({
   head: () => ({
     meta: [
-      { title: "محصول | چوب‌کار" },
+      { title: "محصول | پدر ژپتو" },
       { name: "description", content: "جزئیات محصول چوبی دست‌ساز." },
-      { property: "og:title", content: "محصول | چوب‌کار" },
+      { property: "og:title", content: "محصول | پدر ژپتو" },
       { property: "og:description", content: "جزئیات محصول چوبی دست‌ساز." },
     ],
   }),

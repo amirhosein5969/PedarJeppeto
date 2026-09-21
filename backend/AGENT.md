@@ -561,7 +561,7 @@ frontend SSR 200 on `/ /auth /shop /cart /profile/account`.
     (brute-force):** fails > 5 → `otp:code:{phone}` deleted + 400
     (locked, even the right code now fails). On match: clears
     `otp:code/otp:fails/otp:reqs`, find-or-creates the `User` by phone
-    (new → `role=customer`, name "مشتری چوب‌کار"), mints a **JWT**
+    (new → `role=customer`, name "مشتری پدر ژپتو"), mints a **JWT**
     (HS256, `JWT_SECRET`, 24 h, `sub=user.id` + phone + role) →
     `TokenOut {access_token, phone, role, expires_in}`.
 - **`api/deps.py` (new)** — `get_current_user` (OAuth2PasswordBearer →

@@ -20,8 +20,13 @@ const SESSION_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 /** Mirrors the STORAGE_KEY in src/hooks/useAuth.tsx (mock OTP login). */
 const AUTH_STORAGE_KEY = "choobkar-auth-user";
 
-/** The backend base URL (dev: uvicorn on :8010). */
-export const API_BASE_URL = "http://localhost:8010/api/v1";
+/**
+ * The backend base URL. Injected at BUILD time via the `VITE_API_BASE_URL`
+ * build arg (see Dockerfile + docker-compose.yml); local dev falls back to
+ * uvicorn on :8010.
+ */
+export const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8010/api/v1";
 
 /**
  * UUIDv4 generator — `crypto.randomUUID()` where available, with an

@@ -107,7 +107,7 @@ export function Header() {
               className="flex items-center justify-center"
               aria-label="پدر ژپتو — صفحه‌ی نخست"
             >
-              <Logo size={64} glow />
+              <Logo size={85} glow />
             </Link>
 
             {/* Center: full search from tablet up, icon-triggered panel on mobile */}

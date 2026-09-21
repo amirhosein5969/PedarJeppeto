@@ -102,11 +102,12 @@ export function Header() {
         <div className="mx-auto w-full max-w-7xl px-3 sm:px-4">
           {/* Row 1: brand, search, actions */}
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-2.5 sm:gap-3 sm:py-2">
-            <Link to="/" className="flex items-center gap-2">
-              <Logo size={44} />
-              <span className="text-xl font-extrabold tracking-tight text-primary-soft">
-                پدر ژپتو
-              </span>
+            <Link
+              to="/"
+              className="flex items-center justify-center"
+              aria-label="پدر ژپتو — صفحه‌ی نخست"
+            >
+              <Logo size={64} glow />
             </Link>
 
             {/* Center: full search from tablet up, icon-triggered panel on mobile */}
@@ -338,10 +339,11 @@ export function Header() {
       </header>
 
       {/* Placeholder: the fixed header is out of flow, so this reserves its
-          expanded height (64/60 top row + 53 nav row + 1px border) so the page
-          content is never covered at the top. It is static — the header
-          collapsing on scroll never moves page content. */}
-      <div aria-hidden="true" className="h-[118px] shrink-0 sm:h-[114px]" />
+          expanded height (84/80 top row — 64px glow logo + padding — plus the
+          53 nav row + 1px border) so the page content is never covered at the
+          top. It is static — the header collapsing on scroll never moves page
+          content. */}
+      <div aria-hidden="true" className="h-[138px] shrink-0 sm:h-[134px]" />
     </>
   );
 }

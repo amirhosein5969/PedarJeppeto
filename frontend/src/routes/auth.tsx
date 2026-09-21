@@ -180,7 +180,7 @@ function Auth() {
     <div className="mx-auto w-full max-w-md px-4 py-16">
       <div className="space-y-6 rounded-2xl border border-border bg-card p-8">
         <div className="flex flex-col items-center text-center">
-          <Logo size={60} />
+          <Logo size={64} glow />
           <h1 className="mt-4 text-xl font-extrabold">ورود / ثبت‌نام</h1>
           <p className="mt-2 text-xs leading-7 text-muted-foreground">
             {returnTo

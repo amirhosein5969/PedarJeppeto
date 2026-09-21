@@ -275,6 +275,7 @@ export function useSaveSettings(): UseMutationResult<
           note: m.note,
           fee: fromToman(m.fee),
         })),
+        announcement_text: settings.announcementText,
       };
       return (await api.patch<ApiStoreSettings>("/settings", body)).data;
     },

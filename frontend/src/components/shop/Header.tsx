@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  Bell,
   ChevronDown,
   LogOut,
   Menu,
@@ -21,11 +20,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AnnouncementBar, DEFAULT_ANNOUNCEMENTS } from "./AnnouncementBar";
+import {
+  AnnouncementBar,
+  type AnnouncementItem,
+} from "./AnnouncementBar";
 import { Logo } from "./Logo";
+import { MiniCart } from "./MiniCart";
+import { NotificationsPopover } from "./NotificationsPopover";
 import { useCart } from "./CartContext";
 import { useAuth } from "@/hooks/useAuth";
-import { useCategories } from "@/hooks/queries";
+import { useCategories, useSettings } from "@/hooks/queries";
 import { toFa } from "@/lib/shop-data";
 import { cn } from "@/lib/utils";
 
@@ -45,14 +49,25 @@ const navAfter: NavItem[] = [
   { label: "تماس با ما", to: "/contact" },
 ];
 
-/** Premium underline that grows from the center on hover (shared style). */
-const GROW_UNDERLINE =
-  "absolute -bottom-0.5 left-0 h-[2px] w-full origin-center scale-x-0 rounded-full " +
-  "bg-linear-to-l from-primary-soft to-primary/60 transition-transform duration-300 ease-out";
+/**
+ * Tier 3 nav links: a thin amber line that grows from the CENTER via an
+ * ::after pseudo-element (w-0 → w-full, anchored at left-1/2). On hover the
+ * text pops from 75% opacity to full; the active route stays lit + underlined.
+ */
+const NAV_COMMON =
+  "relative flex items-center whitespace-nowrap px-3.5 py-1.5 text-[15px] font-bold " +
+  "transition-colors duration-300 " +
+  "after:absolute after:-bottom-0.5 after:left-1/2 after:h-[2px] after:w-0 " +
+  "after:-translate-x-1/2 after:rounded-full " +
+  "after:bg-linear-to-l after:from-primary-soft after:to-primary/60 " +
+  "after:transition-all after:duration-300 after:ease-out";
+const NAV_IDLE = cn(NAV_COMMON, "text-foreground/75 hover:text-foreground hover:after:w-full");
+const NAV_ACTIVE = cn(NAV_COMMON, "text-primary-soft after:w-full");
 
 export function Header() {
   const { count } = useCart();
   const { data: categories } = useCategories();
+  const { data: storeSettings } = useSettings();
   const { user, isLoading, logout } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -95,29 +110,39 @@ export function Header() {
     navigate({ to: "/" });
   };
 
+  // Tier 1, item 1 — fully dynamic: the first announcement is whatever the
+  // admin stored in StoreSettings (announcement_text); until the live value
+  // arrives, fall back to the default free-shipping line.
+  const announcementItems: AnnouncementItem[] = [
+    {
+      id: "store-announcement",
+      text:
+        storeSettings?.announcementText?.trim() ||
+        "ارسال رایگان برای خریدهای بالای ۱ میلیون تومان",
+      icon: "truck",
+    },
+    { id: "handmade", text: "ساخت دست‌ساز با چوب طبیعی", icon: "leaf" },
+  ];
+
   const NavLink = ({ item }: { item: NavItem }) => (
-    <Link
-      to={item.to}
-      className="group/link relative flex items-center whitespace-nowrap px-3.5 py-1.5 text-[15px] font-bold text-foreground/80 transition-colors duration-300 hover:text-primary-soft"
-      activeProps={{ className: "relative flex items-center whitespace-nowrap px-3.5 py-1.5 text-[15px] font-bold text-primary-soft" }}
-    >
+    <Link to={item.to} className={NAV_IDLE} activeProps={{ className: NAV_ACTIVE }}>
       {item.label}
-      <span aria-hidden="true" className={cn(GROW_UNDERLINE, "group-hover/link:scale-x-100")} />
     </Link>
   );
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-[100] w-full rounded-b-2xl border-x border-b border-primary/10 bg-background/85 shadow-[0_14px_34px_-16px_rgba(0,0,0,0.55)] backdrop-blur-md">
-        {/* Tier 1 — announcement bar (admin-panel ready, see AnnouncementBar) */}
-        <AnnouncementBar items={DEFAULT_ANNOUNCEMENTS} />
+        {/* Tier 1 — dynamic announcement bar (first item from StoreSettings) */}
+        <AnnouncementBar items={announcementItems} />
 
         <div className="mx-auto w-full max-w-7xl px-3 sm:px-4">
-          {/* Tier 2 — brand / search / actions.
-              flex-row-reverse: in this RTL document the DOM order (brand,
-              search, actions) renders visually LEFT → CENTER → RIGHT. */}
-          <div className="flex flex-row-reverse items-center gap-2.5 py-2.5 sm:gap-4 sm:py-2">
-            {/* Brand — the untouched glow Logo, visually on the left */}
+          {/* Tier 2 — brand / search / actions, standard RTL:
+              DOM order (brand → search → actions) renders RIGHT → LEFT, so
+              the logo sits on the far right, search in the center and the
+              action cluster (cart, account, bell) on the far left. */}
+          <div className="flex items-center gap-2.5 py-2.5 sm:gap-4 sm:py-2">
+            {/* Brand — the untouched glow Logo, far right */}
             <Link
               to="/"
               className="flex shrink-0 items-center justify-center"
@@ -144,39 +169,41 @@ export function Header() {
               </form>
             </div>
 
-            {/* Right: user actions. DOM order in this RTL flex row reads
-                right→left, so the hamburger ends up furthest right and the
-                mobile search toggle sits next to the search field. */}
+            {/* Far-left action cluster. DOM order in this RTL row reads
+                right→left: cart (nearest the search), divider, account,
+                bell, then the mobile-only hamburger / search toggles at the
+                very left edge. */}
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <button
-                onClick={() => setOpen((v) => !v)}
-                className="grid size-10 place-items-center rounded-full border border-primary/15 bg-card text-foreground/85 transition-colors duration-300 hover:border-primary/40 lg:hidden"
-                aria-label="منو"
-              >
-                {open ? <X size={18} /> : <Menu size={18} />}
-              </button>
-
-              <Link
-                to="/cart"
-                className="relative flex items-center gap-2 rounded-full border border-primary/15 bg-card py-2 pr-3 pl-3.5 transition-colors duration-300 hover:border-primary/40"
-                aria-label="سبد خرید"
-              >
-                <span className="relative inline-flex">
-                  <ShoppingCart
-                    size={20}
-                    strokeWidth={2.2}
-                    fill="currentColor"
-                    fillOpacity={0.12}
-                    className="text-foreground"
-                  />
-                  {count > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-extrabold text-primary-foreground shadow-glow">
-                      {toFa(count)}
-                    </span>
-                  )}
-                </span>
-                <span className="hidden text-xs font-bold text-foreground/85 lg:block">سبد خرید</span>
-              </Link>
+              {/* Cart + hover mini-cart (group/mini hover bridge) */}
+              <div className="group/mini relative">
+                <Link
+                  to="/cart"
+                  className="flex items-center gap-2 rounded-full border border-primary/15 bg-card py-2 pr-3 pl-3.5 transition-colors duration-300 hover:border-primary/40"
+                  aria-label="سبد خرید"
+                >
+                  <span className="relative inline-flex">
+                    <ShoppingCart
+                      size={20}
+                      strokeWidth={2.2}
+                      fill="currentColor"
+                      fillOpacity={0.12}
+                      className="text-foreground"
+                    />
+                    {count > 0 && (
+                      <span
+                        className={cn(
+                          "absolute -top-1.5 -right-1.5 grid place-items-center rounded-full bg-primary font-bold leading-none text-primary-foreground shadow-glow ring-2 ring-background",
+                          count > 9 ? "h-4 w-5 px-0.5 text-[9px]" : "h-4 w-4 text-[10px]",
+                        )}
+                      >
+                        {toFa(count)}
+                      </span>
+                    )}
+                  </span>
+                  <span className="hidden text-xs font-bold text-foreground/85 lg:block">سبد خرید</span>
+                </Link>
+                <MiniCart />
+              </div>
 
               <div className="hidden h-6 w-px bg-primary/15 lg:block" />
 
@@ -245,14 +272,15 @@ export function Header() {
                 </DropdownMenu>
               )}
 
-              {user && (
-                <button
-                  className="hidden size-10 place-items-center rounded-full text-foreground/70 transition-colors duration-300 hover:text-primary-soft sm:grid"
-                  aria-label="اعلان‌ها"
-                >
-                  <Bell size={20} />
-                </button>
-              )}
+              <NotificationsPopover />
+
+              <button
+                onClick={() => setOpen((v) => !v)}
+                className="grid size-10 place-items-center rounded-full border border-primary/15 bg-card text-foreground/85 transition-colors duration-300 hover:border-primary/40 lg:hidden"
+                aria-label="منو"
+              >
+                {open ? <X size={18} /> : <Menu size={18} />}
+              </button>
 
               <button
                 onClick={() => setSearchOpen((v) => !v)}
@@ -283,10 +311,7 @@ export function Header() {
                 {/* Category dropdown with chevron */}
                 <DropdownMenu onOpenChange={setCatsOpen}>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="group/cat relative flex items-center gap-1 whitespace-nowrap px-3.5 py-1.5 text-[15px] font-bold text-foreground/80 transition-colors duration-300 hover:text-primary-soft"
-                    >
+                    <button type="button" className={cn(NAV_IDLE, "gap-1")}>
                       دسته‌بندی محصولات
                       <ChevronDown
                         size={14}
@@ -295,10 +320,6 @@ export function Header() {
                           "transition-transform duration-300",
                           catsOpen && "rotate-180",
                         )}
-                      />
-                      <span
-                        aria-hidden="true"
-                        className={cn(GROW_UNDERLINE, "group-hover/cat:scale-x-100")}
                       />
                     </button>
                   </DropdownMenuTrigger>

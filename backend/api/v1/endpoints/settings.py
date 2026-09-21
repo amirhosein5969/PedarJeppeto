@@ -22,6 +22,7 @@ def _to_out(data) -> StoreSettingsOut:
         email=data.email,
         address=data.address,
         zip_code=data.zip_code,
+        announcement_text=data.announcement_text,
         vat_percentage=data.vat_percentage,
         care_oil_price=data.care_oil_price,
         care_oil_enabled=data.care_oil_enabled,

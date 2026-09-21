@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Droplet, Gift, Plus, RotateCcw, Save, Store, Trash2, Truck } from "lucide-react";
+import { Droplet, Gift, Megaphone, Plus, RotateCcw, Save, Store, Trash2, Truck } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -102,6 +102,7 @@ function AdminSettings() {
       careOilPrice: Math.max(0, Math.round(form.careOilPrice || 0)),
       careOilEnabled: form.careOilEnabled,
       shippingMethods,
+      announcementText: form.announcementText.trim(),
     };
     setForm(next);
     saveSettings.mutate(next, {
@@ -408,6 +409,35 @@ function AdminSettings() {
           <p className="rounded-lg border border-white/5 bg-[#1c1916] px-4 py-3 text-[11px] leading-6 text-muted-foreground">
             این روش‌ها در صفحه‌ی پرداخت (check-out) نمایش داده می‌شوند؛ نام روش انتخابی روی هر
             سفارش ثبت می‌شود و در جزئیات سفارش قابل مشاهده است.
+          </p>
+        </div>
+
+        {/* ── Announcement bar: the top strip shown on the whole storefront ── */}
+        <div>
+          <p className="flex items-center gap-2 text-xs font-extrabold text-primary-soft">
+            <Megaphone className="size-4" />
+            نوار اطلاع‌رسانی
+          </p>
+          <Separator className="mt-2 bg-white/5" />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="store-announcement" className="text-xs text-foreground/80">
+            متن نوار بالای سایت
+          </Label>
+          <Input
+            id="store-announcement"
+            maxLength={200}
+            value={form.announcementText}
+            onChange={(e) => {
+              set({ announcementText: e.target.value });
+            }}
+            placeholder="ارسال رایگان برای خریدهای بالای ۱ میلیون تومان"
+            className={inputClass}
+          />
+          <p className="text-[11px] leading-5 text-muted-foreground">
+            در نوار بالای سراسر فروشگاه نمایش داده می‌شود (حداکثر ۲۰۰ نویسه). اگر خالی
+            باشد، پیام پیش‌فرض «ارسال رایگان…» نمایش داده می‌شود.
           </p>
         </div>
 

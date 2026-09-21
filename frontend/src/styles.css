@@ -207,6 +207,40 @@
   );
 }
 
+/* High-converting checkout button: a soft diagonal light band continuously
+   sweeps across the gold surface (left → right), drawing the eye to the
+   primary action. The host element must be `relative overflow-hidden`. */
+@keyframes checkout-shimmer {
+  0% {
+    transform: translateX(0) skewX(-18deg);
+  }
+  55% {
+    transform: translateX(360%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(360%) skewX(-18deg);
+  }
+}
+
+@utility checkout-shimmer {
+  &::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -60%;
+    width: 45%;
+    background: linear-gradient(
+      105deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    transform: skewX(-18deg);
+    animation: checkout-shimmer 2.8s ease-in-out infinite;
+  }
+}
+
 /* Print: A4 sheet with standard margins for the printable invoice
    (/invoice/:orderId). Unlayers the dark site background so only the
    white paper and its ink reach the printer. */

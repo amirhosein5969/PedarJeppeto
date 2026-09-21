@@ -45,6 +45,8 @@ export type StoreSettings = {
   careOilEnabled: boolean;
   /** Configurable shipping methods (name + price) offered at checkout. */
   shippingMethods: ShippingMethodConfig[];
+  /** نوار اطلاع‌رسانی بالای سایت (announcement bar). */
+  announcementText: string;
 };
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
@@ -67,4 +69,5 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
       fee: 145000,
     },
   ],
+  announcementText: "ارسال رایگان برای خریدهای بالای ۱ میلیون تومان",
 };

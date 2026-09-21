@@ -77,6 +77,8 @@ export interface ApiStoreSettings {
   signature_packaging_price: Money;
   signature_packaging_enabled: boolean;
   shipping_methods: ApiShippingMethod[];
+  /** Top announcement-bar text (نوار اطلاع‌رسانی بالای سایت). */
+  announcement_text: string;
 }
 
 export interface ApiStoreSettingsUpdate {
@@ -91,6 +93,7 @@ export interface ApiStoreSettingsUpdate {
   signature_packaging_price?: Money;
   signature_packaging_enabled?: boolean;
   shipping_methods?: (ApiShippingMethod & { fee: Money })[];
+  announcement_text?: string;
 }
 
 export interface ApiPromo {

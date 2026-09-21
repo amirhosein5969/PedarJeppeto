@@ -346,6 +346,12 @@ class StoreSettings(Base):
             {"id": "express", "title": "ارسال سریع تهران", "note": "تحویل کمتر از ۲۴ ساعت", "fee": 145000},
         ],
     )
+    # --- Storefront banner (the top announcement bar in the header) ---------
+    # One-line message served via GET /settings. An empty string means the
+    # client falls back to its built-in default text.
+    announcement_text: Mapped[str] = mapped_column(
+        String(200), default="ارسال رایگان برای خریدهای بالای ۱ میلیون تومان"
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

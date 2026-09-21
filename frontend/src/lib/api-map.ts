@@ -170,6 +170,7 @@ export function toStoreSettings(s: ApiStoreSettings): StoreSettings {
       note: m.note,
       fee: toToman(m.fee),
     })),
+    announcementText: s.announcement_text,
   };
 }
 
@@ -191,6 +192,7 @@ export function toSettingsUpdate(s: StoreSettings): ApiStoreSettingsUpdate {
       note: m.note,
       fee: fromToman(m.fee),
     })),
+    announcement_text: s.announcementText,
   };
 }
 

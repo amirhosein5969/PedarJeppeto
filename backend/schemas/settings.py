@@ -31,6 +31,7 @@ class StoreSettingsOut(BaseModel):
     email: str
     address: str
     zip_code: str
+    announcement_text: str
     vat_percentage: Decimal
     care_oil_price: Decimal
     care_oil_enabled: bool
@@ -47,6 +48,7 @@ class StoreSettingsUpdate(BaseModel):
     email: Optional[str] = Field(default=None, max_length=120)
     address: Optional[str] = Field(default=None, max_length=300)
     zip_code: Optional[str] = Field(default=None, max_length=20)
+    announcement_text: Optional[str] = Field(default=None, max_length=200)
     vat_percentage: Optional[Decimal] = Field(
         default=None, ge=0, le=100, max_digits=5, decimal_places=2
     )

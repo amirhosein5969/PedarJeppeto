@@ -208,13 +208,22 @@ function Cart() {
             </span>
           </div>
 
+          {/* High-converting CTA: rich gold gradient + continuous shimmer
+              sweep + generous padding; the arrow nudges left on hover to
+              pull the shopper forward. */}
           <button
             type="button"
             onClick={proceedToCheckout}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group/cta relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl bg-linear-to-l from-[#a87b16] via-[#d4af37] to-[#ecd28a] px-6 py-4 text-base font-extrabold text-[#241b0f] shadow-[0_14px_30px_-10px_rgba(212,175,55,0.45)] transition-all duration-300 hover:shadow-[0_18px_42px_-10px_rgba(212,175,55,0.65)] hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            ادامه فرایند خرید <ArrowLeft size={16} />
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 checkout-shimmer" />
+            <span className="relative">ادامه فرایند خرید</span>
+            <ArrowLeft
+              size={20}
+              strokeWidth={2.6}
+              className="relative transition-transform duration-300 group-hover/cta:-translate-x-1.5"
+            />
           </button>
 
           {!isLoading && !user && (

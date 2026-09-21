@@ -61,6 +61,7 @@ class StoreSettingsData:
     signature_packaging_price: Decimal
     signature_packaging_enabled: bool
     shipping_methods: tuple[dict, ...]
+    announcement_text: str
 
     # -- (de)serialization --------------------------------------------------
     @classmethod
@@ -78,6 +79,7 @@ class StoreSettingsData:
             signature_packaging_price=Decimal(row.signature_packaging_price),
             signature_packaging_enabled=bool(row.signature_packaging_enabled),
             shipping_methods=tuple(methods),
+            announcement_text=row.announcement_text or "",
         )
 
     def to_json(self) -> str:
@@ -96,6 +98,7 @@ class StoreSettingsData:
                 "shipping_methods": [
                     {**m, "fee": str(m["fee"])} for m in self.shipping_methods
                 ],
+                "announcement_text": self.announcement_text,
             }
         )
 
@@ -119,6 +122,7 @@ class StoreSettingsData:
                 d.get("signature_packaging_enabled", False)
             ),
             shipping_methods=tuple(methods),
+            announcement_text=d.get("announcement_text", ""),
         )
 
     def pricing(self) -> PricingRules:

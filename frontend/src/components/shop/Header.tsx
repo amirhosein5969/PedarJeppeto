@@ -123,7 +123,7 @@ export function Header() {
               className="flex shrink-0 items-center justify-center"
               aria-label="پدر ژپتو — صفحه‌ی نخست"
             >
-              <Logo size={64} glow />
+              <Logo size={85} glow />
             </Link>
 
             {/* Center: wide pill search (tablet & up) */}
@@ -414,10 +414,10 @@ export function Header() {
       </header>
 
       {/* Placeholder: the fixed header is out of flow, so this reserves its
-          expanded height — tier 1 (29px) + tier 2 (84/80px, 64px glow logo) +
+          expanded height — tier 1 (29px) + tier 2 (105/101px, 85px glow logo) +
           tier 3 (45px nav row) — so page content is never covered at the top.
           It is static: the nav row collapsing on scroll never moves content. */}
-      <div aria-hidden="true" className="h-[160px] shrink-0 sm:h-[156px]" />
+      <div aria-hidden="true" className="h-[182px] shrink-0 sm:h-[178px]" />
     </>
   );
 }

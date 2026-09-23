@@ -1,0 +1,13 @@
+pedargeppeto.ir, www.pedargeppeto.ir {
+    # فعال‌سازی فشرده‌سازی خودکار (به شدت روی سرعت لود تاثیر دارد)
+    encode gzip zstd
+
+    # تنظیم هدرهای کش برای عکس‌ها و فایل‌های استاتیک (بدون نیاز به بلاک اضافه)
+    @static path /hearthwood-media/* /_nuxt/* /assets/* /*.png /*.jpg /*.svg
+    header @static Cache-Control "public, max-age=2592000, immutable"
+
+    # مدیریت درخواست‌ها
+    reverse_proxy /api/* backend:8010
+    reverse_proxy /hearthwood-media/* minio:9000
+    reverse_proxy * frontend:8080
+}

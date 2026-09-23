@@ -1,6 +1,6 @@
 """Shared FastAPI dependencies — secure OTP authentication (JWT).
 
-The storefront verifies the customer's phone via the sms.ir OTP gateway
+The storefront verifies the customer's phone via the api.ir OTP gateway
 (``/auth/request-otp`` + ``/auth/verify-otp``) and receives a short-lived
 JWT. This module is the single place that decodes that token and resolves
 the :class:`User` row:

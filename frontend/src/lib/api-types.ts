@@ -255,19 +255,19 @@ export interface ApiMe {
 }
 
 // =============================================================================
-// Secure OTP authentication (sms.ir gateway + JWT)
+// Secure OTP authentication (api.ir gateway + JWT)
 // =============================================================================
 
 /** POST /auth/request-otp — dispatch a 5-digit OTP. */
 export interface ApiOtpRequest {
   phone: string;
-  method: "sms" | "call";
+  method: "sms" | "voice";
 }
 
 /** Response of POST /auth/request-otp. */
 export interface ApiOtpSent {
   sent: boolean;
-  method: "sms" | "call";
+  method: "sms" | "voice";
   ttl_seconds: number;
 }
 

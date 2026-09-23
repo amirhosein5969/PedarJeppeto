@@ -1,4 +1,4 @@
-"""Secure OTP authentication schemas (sms.ir gateway + JWT)."""
+"""Secure OTP authentication schemas (api.ir gateway + JWT)."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ _CODE_RE = re.compile(r"^\d{5}$")
 
 class OtpMethod(str, enum.Enum):
     sms = "sms"
-    call = "call"
+    voice = "voice"
 
 
 class OtpRequestIn(BaseModel):

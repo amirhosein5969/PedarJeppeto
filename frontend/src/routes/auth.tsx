@@ -82,7 +82,7 @@ function Auth() {
 
   // --- POST /auth/request-otp ------------------------------------------------
   const requestOtp = useMutation({
-    mutationFn: async (method: "sms" | "call"): Promise<ApiOtpSent> =>
+    mutationFn: async (method: "sms" | "voice"): Promise<ApiOtpSent> =>
       (await api.post<ApiOtpSent>("/auth/request-otp", { phone: digits, method })).data,
     onMutate: () => {
       setError("");
@@ -165,7 +165,7 @@ function Auth() {
     verifyOtp.mutate();
   };
 
-  const resend = (method: "sms" | "call") => {
+  const resend = (method: "sms" | "voice") => {
     if (resendBlocked || cooldown > 0 || requestOtp.isPending) return;
     requestOtp.mutate(method);
   };
@@ -313,12 +313,12 @@ function Auth() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => resend("call")}
+                    onClick={() => resend("voice")}
                     disabled={resendBlocked || requestOtp.isPending}
                     className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-2 py-2.5 text-[11px] font-bold text-foreground/80 transition-colors hover:border-primary hover:text-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <PhoneCall size={13} />
-                    دریافت کد از طریق تماس
+                    دریافت کد با تماس صوتی
                   </button>
                 </div>
               </div>

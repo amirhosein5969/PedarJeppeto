@@ -66,13 +66,12 @@ class Settings(BaseSettings):
     # reverse-proxy origin in production — set MEDIA_PUBLIC_URL).
     media_public_url: str = "http://localhost:9000"
 
-    # --- OTP / SMS gateway (sms.ir) --------------------------------------------
-    # X-API-KEY for the sms.ir Verify API (POST https://api.sms.ir/v1/send/verify).
+    # --- OTP gateway (api.ir) -----------------------------------------------------
+    # Bearer token for the api.ir OTP services (POST https://s.api.ir/api/sw1/SmsOTP
+    # and .../CallOTP — header "Authorization: Bearer <token>").
     # Empty = the gateway is not configured; /auth/request-otp answers 503 and
     # never touches the provider (zero cost).
-    sms_ir_api_key: str = ""
-    #: sms.ir Verify template that carries the OTP (parameter name: "CODE").
-    sms_ir_template_id: int = 100000
+    api_ir_token: str = ""
 
     # --- JWT (secure OTP auth) -------------------------------------------------
     jwt_secret: str = "dev-insecure-change-me"

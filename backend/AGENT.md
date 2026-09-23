@@ -30,7 +30,7 @@ The repository is split into two sibling projects:
 | Cache / ephemeral state | **Redis 7** | Hot-read caching + temporary shopping carts |
 | Object storage | **MinIO** (S3-compatible) | Product / wood-grain imagery via **aioboto3** |
 | Configuration | **pydantic-settings** | 12-factor: all config from environment / `.env` |
-| Auth | **PyJWT** + **httpx** (sms.ir Verify OTP; Call mocked) + passlib | Secure OTP login; Redis rate/brute-force limits |
+| Auth | **PyJWT** + **httpx** (api.ir SmsOTP + CallOTP) + passlib | Secure OTP login; Redis rate/brute-force limits |
 | Runtime | **Docker Compose** (5 services) | Fully containerized monorepo — root `docker-compose.yml` |
 
 ### Service ports (local development)
@@ -585,8 +585,9 @@ frontend SSR 200 on `/ /auth /shop /cart /profile/account`.
   `hc:auth-expired`; `useAuth.tsx` drops legacy token-less records and
   listens for the expiry event. `api-types.ts` += `ApiOtpRequest/
   ApiOtpSent/ApiOtpVerify/ApiAuthToken`.
-- **Env:** gateway key (empty = 503, zero cost — `SMS_IR_API_KEY` since
-  Phase 10) + `JWT_SECRET` (root `.env` / `.env.example` / compose, `:-`
+- **Env:** gateway key (empty = 503, zero cost — `API_IR_TOKEN` since
+  Phase 11; `SMS_IR_API_KEY` in Phase 10) + `JWT_SECRET` (root `.env` /
+  `.env.example` / compose, `:-`
   defaults so a missing key never blocks startup).
 - **36 endpoints** total under `/api/v1`.
 
@@ -622,7 +623,7 @@ and (2) storefront imagery not loading.
   = 200 from the frontend container; SSR 200 on `/ /shop /about`;
   `tsc --noEmit` clean.
 
-### Phase 10 — SMS Provider Migration: api.ir → sms.ir ✅ (current)
+### Phase 10 — SMS Provider Migration: api.ir → sms.ir ✅
 The OTP SMS provider moved from api.ir to **sms.ir**. The auth contract
 (`/auth/request-otp` `method: "sms"|"call"`, Redis rate limits, 120 s
 code TTL, JWT) and the entire frontend UX (120 s countdown, two resend
@@ -650,6 +651,36 @@ buttons, 429/brute-force lock, toasts) are **unchanged**.
   → 200 (mock logged) + code verifiable → JWT (full mock-call flow);
   bogus key against the real endpoint → provider 401 → **502** + code
   deleted (error path confirmed against `api.sms.ir`).
+
+### Phase 11 — OTP Provider Migration BACK to api.ir (real Voice OTP) ✅ (current)
+The OTP provider moved back to **api.ir**, this time with a **real**
+voice-call fallback (no more mock). The auth contract, Redis rate limits
+(120 s code TTL — shared by BOTH SMS and voice dispatches), and the JWT
+flow are unchanged; the resend `method` value is now `"voice"`
+(was `"call"`).
+
+- **`core/config.py`** — `sms_ir_api_key` / `sms_ir_template_id` removed;
+  added `api_ir_token: str = ""` (env `API_IR_TOKEN`).
+- **`services/sms.py`** — both transports now hit api.ir with
+  `Authorization: Bearer {API_IR_TOKEN}`:
+  - `send_otp_sms` → `POST https://s.api.ir/api/sw1/SmsOTP`
+    `{"mobile", "code", "template": 1}` (template 1 = کد ورود).
+  - `send_otp_call` → `POST https://s.api.ir/api/sw1/CallOTP`
+    `{"number", "code"}` — **real integration** (was mocked in Phase 10).
+  - Both parse the `ResultDataOfboolean` envelope: non-2xx **or**
+    `success: false` → `SmsError` → 502 + code deleted; empty token →
+    `SmsNotConfiguredError` → 503 before any provider call (zero cost).
+- **`schemas/auth.py`** — `OtpMethod.call` → `OtpMethod.voice`
+  (`method: "sms"|"voice"`); the single `/auth/request-otp` route serves
+  both methods and the `otp:reqs:{phone}` Redis limit (3 / 15 min) applies
+  to both — voice requests cannot bypass the SMS limit.
+- **Env** — root `.env` / `.env.example` / `docker-compose.yml`:
+  `SMS_IR_API_KEY` + `SMS_IR_TEMPLATE_ID` removed, `API_IR_TOKEN` added
+  (`:-` default; empty = 503, never blocks startup).
+- **Frontend** — `routes/auth.tsx`: at `00:00` the two resend buttons are
+  "ارسال مجدد پیامک" (`method:"sms"`) + **"دریافت کد با تماس صوتی"**
+  (`method:"voice"`); either one re-dispatches and restarts the 120 s
+  countdown. `api-types.ts` `method: "sms" | "voice"`.
 
 ---
 
@@ -695,7 +726,7 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 │   │           ├── users.py        # GET /users (admin) + /users/me family (JWT) + /users/me/addresses (Phase 7)
 │   │           └── analytics.py    # GET /analytics/sales, /activities, /traffic
 │   ├── core/
-│   │   ├── config.py         # pydantic-settings (env-driven config; + sms_ir_*, jwt_*, media_public_url)
+│   │   ├── config.py         # pydantic-settings (env-driven config; + api_ir_token, jwt_*, media_public_url)
 │   │   ├── cache.py          # async Redis client (lazy singleton) — carts + cache + counters + OTP state
 │   │   ├── middleware.py     # TrafficMiddleware — best-effort Redis page-view INCR on GETs (Phase 6)
 │   │   └── pricing.py        # Decimal helpers + FREE_SHIPPING_FROM + DEFAULT_SHIPPING_METHODS
@@ -717,7 +748,7 @@ The repo root is the monorepo: `backend/` + `frontend/` (formerly
 │   │   ├── seed.py           # Great Seed — mock catalog → Postgres + MinIO (idempotent; assets from frontend/public)
 │   │   └── fix_urls.py       # one-shot: internal minio:9000 URLs → public host (Phase 9)
 │   └── services/
-│       ├── sms.py            # sms.ir Verify OTP via httpx; Call mocked (Phase 8/10)
+│       ├── sms.py            # api.ir SmsOTP + CallOTP via httpx (Phase 8/10/11)
 │       ├── storage.py        # MediaStorage — async MinIO uploads; public URLs via MEDIA_PUBLIC_URL
 │       ├── errors.py         # CheckoutError base (shared, avoids import cycles)
 │       ├── cart.py           # Redis cart (WATCH/MULTI, TTL 14d, qty cap 20, variants)
@@ -771,7 +802,7 @@ payment gateway integration, `workers/`.
 
 ```powershell
 cd C:\Users\USER\Desktop\site
-Copy-Item .env.example .env      # then set strong secrets (+ SMS_IR_API_KEY, JWT_SECRET)
+Copy-Item .env.example .env      # then set strong secrets (+ API_IR_TOKEN, JWT_SECRET)
 docker compose up -d --build     # 5 containers, health-gated; backend auto-runs alembic
 docker compose exec backend python scripts/seed.py   # first run only (idempotent)
 ```

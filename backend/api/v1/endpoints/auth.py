@@ -1,10 +1,11 @@
-"""Secure OTP authentication (Phase: sms.ir gateway + JWT).
+"""Secure OTP authentication (Phase: api.ir gateway + JWT).
 
 Flow
 ----
 1. ``POST /auth/request-otp`` — generate a 5-digit code, store it in Redis
-   (TTL 120 s) and dispatch it via the sms.ir Verify API (SMS) or the
-   (currently mocked) IVR call path.
+   (TTL 120 s) and dispatch it via the api.ir SmsOTP endpoint
+   (``method="sms"``) or the api.ir CallOTP voice endpoint
+   (``method="voice"``).
 2. ``POST /auth/verify-otp``  — verify the code, find-or-create the
    :class:`User` in Postgres and issue a JWT access token.
 
@@ -90,7 +91,7 @@ def _mint_token(user: User) -> tuple[str, int]:
 @router.post(
     "/request-otp",
     response_model=OtpRequestOut,
-    summary="Dispatch a 5-digit OTP by SMS or IVR Call",
+    summary="Dispatch a 5-digit OTP by SMS (api.ir SmsOTP) or voice call (api.ir CallOTP)",
 )
 async def request_otp(
     payload: OtpRequestIn,
@@ -117,7 +118,7 @@ async def request_otp(
     await redis.setex(_code_key(phone), OTP_TTL_SECONDS, code)
 
     try:
-        if method is OtpMethod.call:
+        if method is OtpMethod.voice:
             await send_otp_call(number=phone, code=code)
         else:
             await send_otp_sms(mobile=phone, code=code)

@@ -106,8 +106,7 @@ services:
       S3_BUCKET: ${S3_BUCKET:-hearthwood-media}
       MEDIA_PUBLIC_URL: "https://pedargeppeto.ir"
       CORS_ORIGINS: '["https://pedargeppeto.ir", "https://www.pedargeppeto.ir"]'
-      SMS_IR_API_KEY: ${SMS_IR_API_KEY:-}
-      SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID:-100000}
+      API_IR_TOKEN: ${API_IR_TOKEN:-}
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-jwt-secret-change-me}
     ports:
       - "${BACKEND_PORT:-8010}:8010"

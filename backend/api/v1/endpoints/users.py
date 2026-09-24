@@ -16,7 +16,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.deps import get_current_user
+from api.deps import get_current_admin_user, get_current_user
 from db.database import get_db
 from db.models import Order, OrderItem, OrderStatus, User, UserAddress
 from schemas.user import (
@@ -34,7 +34,10 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("", response_model=list[UserResponse], summary="List all users (admin)")
-async def list_users(db: AsyncSession = Depends(get_db)) -> list[UserResponse]:
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+) -> list[UserResponse]:
     order_count = (
         select(func.count(Order.id))
         .where(Order.user_id == User.id)

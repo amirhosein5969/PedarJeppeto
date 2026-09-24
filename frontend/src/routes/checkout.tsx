@@ -26,7 +26,7 @@ import {
   useMyAddresses,
   usePlaceOrder,
   useSettings,
-  useUsers,
+  useMyProfile,
   useValidatePromo,
 } from "@/hooks/queries";
 import { ApiError } from "@/lib/api";
@@ -245,16 +245,16 @@ function Checkout() {
   };
 
   // Receiver identity (name/phone) prefilled from the profile, once.
-  const { data: users } = useUsers();
+  // (GET /users/me — the customer-portal endpoint; the admin /users board
+  // is strictly RBAC-protected now.)
+  const { data: myProfile } = useMyProfile();
   useEffect(() => {
-    if (!authUser?.phone || !users) return;
-    const profile = users.find((u) => u.phone === authUser.phone);
-    if (!profile) return;
+    if (!authUser?.phone || !myProfile) return;
     const set = (name: keyof CheckoutValues, value: string) =>
       form.setValue(name, value, { shouldValidate: false, shouldDirty: false });
-    set("fullName", profile.name);
-    set("phone", profile.phone);
-  }, [authUser?.phone, users, form]);
+    set("fullName", myProfile.full_name);
+    set("phone", myProfile.phone);
+  }, [authUser?.phone, myProfile, form]);
 
   // When the address book arrives, preselect the default card (client only).
   useEffect(() => {

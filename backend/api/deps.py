@@ -7,6 +7,9 @@ the :class:`User` row:
 
 * :func:`get_current_user` — **required** identity (401/403). Protects the
   ``/users/me`` family.
+* :func:`get_current_admin_user` — **admin-only** RBAC gate (401 unauth /
+  403 non-admin). Protects every management endpoint (catalog writes,
+  order management, promos, settings, analytics, uploads, user board).
 * :func:`get_current_user_or_none` — **optional** identity for flows that
   must also serve guests (checkout binds the order to the account when a
   valid token is present, otherwise to the receiver's phone).
@@ -22,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from db.database import get_db
-from db.models import User
+from db.models import User, UserRole
 
 #: Where clients can (re)obtain a token — surfaced in the Swagger UI.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/verify-otp")
@@ -31,6 +34,7 @@ _bearer_optional = HTTPBearer(auto_error=False)
 
 _UNAUTHORIZED = "برای دسترسی به این بخش ابتدا وارد شوید."
 _INACTIVE = "حساب شما غیرفعال شده است."
+_FORBIDDEN_NOT_ADMIN = "دسترسی به این بخش فقط برای مدیر فروشگاه مجاز است."
 
 _UNAUTH_HEADERS = {"WWW-Authenticate": "Bearer"}
 
@@ -73,6 +77,23 @@ async def get_current_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=_INACTIVE
+        )
+    return user
+
+
+async def get_current_admin_user(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Admin-only RBAC gate on top of :func:`get_current_user`.
+
+    The role is read from the **database row** the JWT resolves to (never
+    from the token claims), so a role downgrade takes effect immediately
+    and a forged/stale ``role`` claim grants nothing. Any authenticated,
+    active but non-admin caller gets ``403 Forbidden``.
+    """
+    if user.role is not UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=_FORBIDDEN_NOT_ADMIN
         )
     return user
 

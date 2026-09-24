@@ -8,8 +8,9 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import get_current_admin_user
 from db.database import get_db
-from db.models import Category
+from db.models import Category, User
 from schemas.category import CategoryCreate, CategoryResponse
 
 router = APIRouter(prefix="/categories", tags=["categories"])
@@ -44,10 +45,12 @@ async def list_categories(db: AsyncSession = Depends(get_db)) -> list[Category]:
     "",
     response_model=CategoryResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a category",
+    summary="Create a category (admin)",
 )
 async def create_category(
-    payload: CategoryCreate, db: AsyncSession = Depends(get_db)
+    payload: CategoryCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
 ) -> Category:
     name = payload.name.strip()
     slug = (payload.slug or "").strip() or slugify(name)

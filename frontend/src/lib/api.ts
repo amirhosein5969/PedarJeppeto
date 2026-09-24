@@ -64,7 +64,7 @@ function getSessionId(): string {
 }
 
 /** Read one field of the persisted auth record (`useAuth`'s storage). */
-function readAuthField(field: "phone" | "token"): string | null {
+function readAuthField(field: "phone" | "token" | "role"): string | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
@@ -88,6 +88,21 @@ export function getAuthPhone(): string | null {
 /** The JWT access token issued by `POST /auth/verify-otp`, or null. */
 export function getAuthToken(): string | null {
   return readAuthField("token");
+}
+
+/** The persisted role from the unified OTP login, or null when signed out. */
+export function getAuthRole(): "admin" | "customer" | null {
+  const role = readAuthField("role");
+  return role === "admin" || role === "customer" ? role : null;
+}
+
+/**
+ * True only for a token-backed ADMIN session. Route guards (`/admin/*`)
+ * use this client-side gate; the REAL enforcement is the backend RBAC
+ * (`get_current_admin_user` → 401/403) — this only steers the UX.
+ */
+export function hasAdminSession(): boolean {
+  return getAuthToken() !== null && getAuthRole() === "admin";
 }
 
 /**

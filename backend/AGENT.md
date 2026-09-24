@@ -652,7 +652,7 @@ buttons, 429/brute-force lock, toasts) are **unchanged**.
   bogus key against the real endpoint → provider 401 → **502** + code
   deleted (error path confirmed against `api.sms.ir`).
 
-### Phase 11 — OTP Provider Migration BACK to api.ir (real Voice OTP) ✅ (current)
+### Phase 11 — OTP Provider Migration BACK to api.ir (real Voice OTP) ✅
 The OTP provider moved back to **api.ir**, this time with a **real**
 voice-call fallback (no more mock). The auth contract, Redis rate limits
 (120 s code TTL — shared by BOTH SMS and voice dispatches), and the JWT
@@ -681,6 +681,44 @@ flow are unchanged; the resend `method` value is now `"voice"`
   "ارسال مجدد پیامک" (`method:"sms"`) + **"دریافت کد با تماس صوتی"**
   (`method:"voice"`); either one re-dispatches and restarts the 120 s
   countdown. `api-types.ts` `method: "sms" | "voice"`.
+
+### Phase 12 — Unified OTP Login + Strict RBAC ✅ (current)
+The separate mock admin login (username/password demo card) is **gone** —
+one OTP flow authenticates everyone, and the role carried by the JWT /
+`TokenOut.role` decides the landing page and the admin panel's visibility.
+
+- **Unified login (`/auth/verify-otp`)** — already returned
+  `role` in the JWT payload and `TokenOut` (Phase 8); now the frontend
+  TRUSTS it (was: hard-coded `phone === ADMIN_PROFILE.phone`).
+- **`api/deps.py`** — new `get_current_admin_user` (on top of
+  `get_current_user`): decodes the JWT → loads the DB `User` → requires
+  `user.role is UserRole.admin`, else **403** (Persian detail). The role
+  is checked on the DB row, never on the token claim — a revoked role
+  takes effect immediately.
+- **RBAC applied to every admin route** (GETs the storefront needs stay
+  public): `POST/PATCH /products`, `POST /categories`, `GET /[id]
+  /PATCH-status /orders` (single-order GET = admin **or owner** so
+  customers can still print their own invoice), promo list/create/update/
+  delete (`/promotions/validate` public for checkout), `PATCH /settings`,
+  all `/analytics/*`, `POST /upload`, `GET /users`.
+- **Frontend** — `lib/admin-auth.ts` (mock session) and the `AdminLogin`
+  card in `AdminLayout` **deleted**. `/admin` route `beforeLoad` is the
+  AdminRoute guard (`hasAdminSession()` → else `/auth?returnTo=…`,
+  SSR-safe) and `AdminLayout` re-checks `useAuth` at render
+  (`<Navigate to="/auth">`). `routes/auth.tsx` + `lib/auth-redirect.ts`
+  (`postLoginPath`): role from the API — admin → `/admin/dashboard`,
+  customer → `/`, a `returnTo` intent wins except an `/admin/*` intent for
+  a customer (loop guard). Logout in the panel clears the SHARED session.
+  Header's "پنل مدیریت" item was already `role === "admin"`-gated.
+  `checkout.tsx` prefills the receiver from `GET /users/me` (was wrongly
+  reading the admin `GET /users` board).
+- **First real admin (runbook — until the RBAC rollout the panel never
+  had a DB admin):** sign in once at `/auth` with the admin phone, then
+  `docker compose exec -T postgres psql -U hearthwood -d hearthwood -c
+  "UPDATE users SET role='admin' WHERE phone='09121112233';"`.
+- Verified: `py_compile` clean across all touched modules; `tsc --noEmit`
+  clean; eslint adds zero new rule violations (only the repo's pre-existing
+  prettier drift remains).
 
 ---
 

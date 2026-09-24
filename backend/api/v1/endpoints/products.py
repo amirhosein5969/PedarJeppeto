@@ -8,8 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import get_current_admin_user
 from db.database import get_db
-from db.models import Category, Product
+from db.models import Category, Product, User
 from schemas.product import ProductCreate, ProductResponse, ProductUpdate
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -39,10 +40,12 @@ async def list_products(
     "",
     response_model=ProductResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a product",
+    summary="Create a product (admin)",
 )
 async def create_product(
-    payload: ProductCreate, db: AsyncSession = Depends(get_db)
+    payload: ProductCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
 ) -> Product:
     # FK is RESTRICT, so a dangling category_id would 500 — fail fast with 404.
     exists = await db.execute(
@@ -93,6 +96,7 @@ async def update_product(
     product_id: int,
     payload: ProductUpdate,
     db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
 ) -> Product:
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()

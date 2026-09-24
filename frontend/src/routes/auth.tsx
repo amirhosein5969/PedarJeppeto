@@ -5,7 +5,7 @@ import { ArrowLeft, Loader2, MessageSquare, PhoneCall, ShieldCheck } from "lucid
 import { toast } from "sonner";
 import { Logo } from "@/components/shop/Logo";
 import { useAuth } from "@/hooks/useAuth";
-import { ADMIN_PROFILE } from "@/lib/admin-auth";
+import { postLoginPath } from "@/lib/auth-redirect";
 import { api, ApiError } from "@/lib/api";
 import type { ApiAuthToken, ApiOtpSent } from "@/lib/api-types";
 
@@ -65,11 +65,11 @@ function Auth() {
 
   const digits = toLatinDigits(phone).trim();
 
-  // Already signed in: never sit on the login page — go home (or back to the
-  // interrupted purchase).
+  // Already signed in: never sit on the login page — smart-forward with the
+  // same role-aware rules used right after a fresh login.
   useEffect(() => {
     if (!isLoading && user) {
-      navigate({ to: returnTo ?? "/" });
+      navigate({ to: postLoginPath(user.role, returnTo) });
     }
   }, [isLoading, user, navigate, returnTo]);
 
@@ -118,10 +118,13 @@ function Auth() {
         code: toLatinDigits(code).trim(),
       })).data,
     onSuccess: (data) => {
+      // UNIFIED LOGIN: the role comes from the server (JWT/DB), not from a
+      // hard-coded phone list — one OTP flow serves customers AND admins.
+      const role = data.role === "admin" ? "admin" : "customer";
       login({
         id: `u-${digits}`,
         phone: digits,
-        role: digits === ADMIN_PROFILE.phone ? "admin" : "customer",
+        role,
         token: data.access_token,
       });
       toast.success("با موفقیت وارد شدید", {
@@ -130,9 +133,10 @@ function Auth() {
           onClick: () => navigate({ to: "/cart" }),
         },
       });
-      // Never interrupt a purchase: a return intent (e.g. /checkout from the
-      // cart guard) wins; a standard header login goes home.
-      navigate({ to: returnTo ?? "/" });
+      // Smart redirection: a return intent (e.g. /checkout from the cart
+      // guard) never gets interrupted; otherwise admins go straight to the
+      // admin dashboard and customers home.
+      navigate({ to: postLoginPath(role, returnTo) });
     },
     onError: (err) => {
       setError(

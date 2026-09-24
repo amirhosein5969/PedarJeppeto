@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Navigate, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
   ChevronLeft,
@@ -21,8 +21,6 @@ import { toast } from "sonner";
 
 import { Logo } from "@/components/shop/Logo";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
@@ -32,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ADMIN_PROFILE, readAdminSession, setAdminSession } from "@/lib/admin-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const ADMIN_NAV = [
@@ -60,8 +58,12 @@ const NAV_LEAVES = ADMIN_NAV.flatMap((item): readonly { to: string; label: strin
 );
 
 export function AdminLayout() {
-  // SSR-safe mock gate: null until the client reads the session from storage.
-  const [authed, setAuthed] = useState<boolean | null>(null);
+  // UNIFIED LOGIN gate: the panel renders only for a persisted session
+  // issued by the shared OTP flow (POST /auth/verify-otp) with role=admin.
+  // The old mock username/password card is gone — admins sign in at /auth
+  // like everyone else; the backend RBAC answers 401/403 regardless.
+  const { user, isLoading, logout } = useAuth();
+  const navigate = useNavigate();
   const [navOpen, setNavOpen] = useState(false);
   // Submenu accordion state: pinned = manually opened, closed = manually
   // collapsed (also overrides the auto-open of the active group).
@@ -70,29 +72,18 @@ export function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    setAuthed(readAdminSession());
-  }, []);
-
-  useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
 
-  if (authed === null) return <div className="min-h-screen bg-background" />;
+  // SSR / first hydration paint: the session lives in localStorage, so we
+  // can only decide on the client — render a neutral frame until then.
+  if (isLoading) return <div className="min-h-screen bg-background" />;
 
-  if (!authed) {
-    return (
-      <AdminLogin
-        onLogin={() => {
-          setAdminSession(true);
-          // No router.navigate here: the /admin -> /admin/dashboard redirect
-          // already placed us on the right URL before the login card rendered.
-          // Re-rendering in place avoids a client-side re-match that surfaces
-          // as a 404 when a stale browser tab holds an outdated client route
-          // tree (long-lived vite dev sessions).
-          setAuthed(true);
-        }}
-      />
-    );
+  // AdminRoute (second line of defense after the /admin beforeLoad guard):
+  // signed out or non-admin → back to the unified OTP login with a return
+  // intent, which postLoginPath only honors for actual admins.
+  if (!user || !user.token || user.role !== "admin") {
+    return <Navigate to="/auth" search={{ returnTo: pathname }} replace />;
   }
 
   const active = NAV_LEAVES.find((item) => pathname.startsWith(item.to));
@@ -270,11 +261,9 @@ export function AdminLayout() {
                 م
               </span>
               <span className="hidden text-start leading-tight sm:block">
-                <span className="block text-xs font-bold text-foreground">
-                  {ADMIN_PROFILE.name}
-                </span>
+                <span className="block text-xs font-bold text-foreground">مدیر پدر ژپتو</span>
                 <span dir="ltr" className="block text-[10px] text-muted-foreground">
-                  {ADMIN_PROFILE.phone}
+                  {user.phone}
                 </span>
               </span>
               <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -282,9 +271,9 @@ export function AdminLayout() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="flex flex-col">
-              <span className="text-xs font-bold">{ADMIN_PROFILE.name}</span>
+              <span className="text-xs font-bold">مدیر پدر ژپتو</span>
               <span dir="ltr" className="text-[11px] font-normal text-muted-foreground">
-                {ADMIN_PROFILE.phone}
+                {user.phone}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -300,9 +289,10 @@ export function AdminLayout() {
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => {
-                setAdminSession(false);
-                setAuthed(false);
+                // Unified logout: drops the shared session (admin + storefront).
+                logout();
                 toast.success("از حساب مدیر خارج شدید.");
+                navigate({ to: "/" });
               }}
             >
               <LogOut />
@@ -318,84 +308,6 @@ export function AdminLayout() {
           <Outlet />
         </div>
       </main>
-    </div>
-  );
-}
-
-function AdminLogin({ onLogin }: { onLogin: () => void }) {
-  const [phone, setPhone] = useState<string>(ADMIN_PROFILE.phone);
-  const [password, setPassword] = useState("demo1234");
-
-  return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background px-4">
-      <div
-        aria-hidden
-        className="absolute top-0 right-0 size-96 rounded-full bg-primary/5 blur-[110px]"
-      />
-      <div
-        aria-hidden
-        className="absolute bottom-0 left-0 size-96 rounded-full bg-primary/[0.04] blur-[110px]"
-      />
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onLogin();
-        }}
-        className="relative w-full max-w-sm rounded-2xl border border-white/5 bg-[#1a1714] p-8 shadow-soft"
-      >
-        <div className="flex items-center gap-3">
-          <Logo size={44} />
-          <div>
-            <h1 className="text-lg font-extrabold text-foreground">پنل مدیریت پدر ژپتو</h1>
-            <p className="text-xs text-muted-foreground">ورود مخصوص کادر کارگاه</p>
-          </div>
-        </div>
-
-        <Separator className="my-6 bg-white/5" />
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="admin-phone">شماره موبایل</Label>
-            <Input
-              id="admin-phone"
-              type="tel"
-              dir="ltr"
-              placeholder="09123456789"
-              className="border-white/10 bg-[#151311] text-start"
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value);
-              }}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="admin-password">رمز عبور</Label>
-            <Input
-              id="admin-password"
-              type="password"
-              dir="ltr"
-              className="border-white/10 bg-[#151311] text-start"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-              }}
-              required
-            />
-          </div>
-        </div>
-
-        <Button
-          type="submit"
-          className="mt-6 w-full bg-linear-to-l from-primary to-primary-soft font-bold text-primary-foreground hover:opacity-90"
-        >
-          ورود به پیشخوان
-        </Button>
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground/70">
-          حالت نمایشی: با هر نام کاربری و رمز عبوری وارد می‌شوید.
-        </p>
-      </form>
     </div>
   );
 }

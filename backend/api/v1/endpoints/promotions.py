@@ -1,12 +1,18 @@
-"""Promo code endpoints (Phase 4) — admin CRUD + checkout validation."""
+"""Promo code endpoints (Phase 4) — admin CRUD + checkout validation.
+
+RBAC: the CRUD surface (list/create/update/delete) is admin-only; only
+``POST /promotions/validate`` stays public because the checkout preview —
+including guests — needs to price a promo before ordering.
+"""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import get_current_admin_user
 from db.database import get_db
-from db.models import PromoCode
+from db.models import PromoCode, User
 from schemas.promotion import (
     PromoCreate,
     PromoResponse,
@@ -28,8 +34,11 @@ def _get_promo_or_404(promo: PromoCode | None, code: int | str) -> PromoCode:
     return promo
 
 
-@router.get("", response_model=list[PromoResponse], summary="List all promo codes")
-async def list_promos(db: AsyncSession = Depends(get_db)) -> list[PromoCode]:
+@router.get("", response_model=list[PromoResponse], summary="List promo codes (admin)")
+async def list_promos(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+) -> list[PromoCode]:
     result = await db.execute(select(PromoCode).order_by(PromoCode.id))
     return list(result.scalars().all())
 
@@ -38,10 +47,12 @@ async def list_promos(db: AsyncSession = Depends(get_db)) -> list[PromoCode]:
     "",
     response_model=PromoResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a promo code",
+    summary="Create a promo code (admin)",
 )
 async def create_promo(
-    payload: PromoCreate, db: AsyncSession = Depends(get_db)
+    payload: PromoCreate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
 ) -> PromoCode:
     exists = await db.execute(select(PromoCode).where(PromoCode.code == payload.code))
     if exists.scalar_one_or_none() is not None:
@@ -66,10 +77,13 @@ async def create_promo(
 @router.patch(
     "/{promo_id}",
     response_model=PromoResponse,
-    summary="Update a promo code (partial)",
+    summary="Update a promo code (partial, admin)",
 )
 async def update_promo(
-    promo_id: int, payload: PromoUpdate, db: AsyncSession = Depends(get_db)
+    promo_id: int,
+    payload: PromoUpdate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
 ) -> PromoCode:
     result = await db.execute(select(PromoCode).where(PromoCode.id == promo_id))
     promo = _get_promo_or_404(result.scalar_one_or_none(), promo_id)
@@ -100,9 +114,13 @@ async def update_promo(
 @router.delete(
     "/{promo_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a promo code",
+    summary="Delete a promo code (admin)",
 )
-async def delete_promo(promo_id: int, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_promo(
+    promo_id: int,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+) -> None:
     result = await db.execute(select(PromoCode).where(PromoCode.id == promo_id))
     promo = _get_promo_or_404(result.scalar_one_or_none(), promo_id)
     await db.delete(promo)

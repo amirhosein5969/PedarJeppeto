@@ -1,14 +1,18 @@
 """Store settings endpoints (singleton) — GET + partial PATCH.
 
 The settings row is the source of truth for the seller block and all checkout
-pricing. ``PATCH`` accepts any subset of fields; after a successful write the
-Redis cache is refreshed so the next checkout sees the new prices immediately.
+pricing. ``GET`` stays public (the storefront renders the seller block +
+pricing). ``PATCH`` accepts any subset of fields and is **admin-only**;
+after a successful write the Redis cache is refreshed so the next checkout
+sees the new prices immediately.
 """
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import get_current_admin_user
 from db.database import get_db
+from db.models import User
 from schemas.settings import StoreSettingsOut, StoreSettingsUpdate
 from services.settings import update_store_settings, get_store_settings_data
 
@@ -47,10 +51,12 @@ async def get_settings(db: AsyncSession = Depends(get_db)) -> StoreSettingsOut:
 
 
 @router.patch(
-    "", response_model=StoreSettingsOut, summary="Update store settings (partial)"
+    "", response_model=StoreSettingsOut, summary="Update store settings (partial, admin)"
 )
 async def patch_settings(
-    payload: StoreSettingsUpdate, db: AsyncSession = Depends(get_db)
+    payload: StoreSettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
 ) -> StoreSettingsOut:
     updates = payload.model_dump(exclude_unset=True)
     if "shipping_methods" in updates and updates["shipping_methods"] is not None:

@@ -1,6 +1,6 @@
 """Analytics endpoints (Phase 5.1 / Phase 6) — live dashboard aggregates.
 
-Three read-only routes for the admin dashboard:
+Three read-only routes for the admin dashboard (**all admin-only**):
 
 * ``GET /analytics/sales``      — daily revenue for the last 7 days
   (non-cancelled orders, bucketed by the *server-local* day; zero-filled).
@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.deps import get_current_admin_user
 from core.cache import get_redis
 from core.pricing import q2
 from db.database import get_db
@@ -47,9 +48,12 @@ MAX_STOCK_ALERTS = 5
 @router.get(
     "/sales",
     response_model=list[SalesDayOut],
-    summary="Daily revenue, last 7 days (non-cancelled orders)",
+    summary="Daily revenue, last 7 days (admin)",
 )
-async def sales_summary(db: AsyncSession = Depends(get_db)) -> list[SalesDayOut]:
+async def sales_summary(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+) -> list[SalesDayOut]:
     now = datetime.now().astimezone()
     # Start of local day, 6 days back — so the window covers today..-6.
     since = (
@@ -73,9 +77,11 @@ async def sales_summary(db: AsyncSession = Depends(get_db)) -> list[SalesDayOut]
 @router.get(
     "/traffic",
     response_model=list[TrafficDayOut],
-    summary="Daily page views, last 7 days (Redis counters)",
+    summary="Daily page views, last 7 days (admin, Redis counters)",
 )
-async def traffic_summary() -> list[TrafficDayOut]:
+async def traffic_summary(
+    _admin: User = Depends(get_current_admin_user),
+) -> list[TrafficDayOut]:
     """Read the last 7 days of ``page_views:YYYY-MM-DD`` counters from Redis.
 
     The counters are incremented by :class:`core.middleware.TrafficMiddleware`
@@ -100,9 +106,12 @@ async def traffic_summary() -> list[TrafficDayOut]:
 @router.get(
     "/activities",
     response_model=ActivityFeedOut,
-    summary="Combined recent-activity feed (orders + users + low stock)",
+    summary="Combined recent-activity feed (admin: orders + users + low stock)",
 )
-async def activity_feed(db: AsyncSession = Depends(get_db)) -> ActivityFeedOut:
+async def activity_feed(
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+) -> ActivityFeedOut:
     orders_res = await db.execute(
         select(Order).options(selectinload(Order.user))
         .order_by(Order.id.desc())

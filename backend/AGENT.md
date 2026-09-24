@@ -682,7 +682,7 @@ flow are unchanged; the resend `method` value is now `"voice"`
   (`method:"voice"`); either one re-dispatches and restarts the 120 s
   countdown. `api-types.ts` `method: "sms" | "voice"`.
 
-### Phase 12 — Unified OTP Login + Strict RBAC ✅ (current)
+### Phase 12 — Unified OTP Login + Strict RBAC ✅
 The separate mock admin login (username/password demo card) is **gone** —
 one OTP flow authenticates everyone, and the role carried by the JWT /
 `TokenOut.role` decides the landing page and the admin panel's visibility.
@@ -719,6 +719,45 @@ one OTP flow authenticates everyone, and the role carried by the JWT /
 - Verified: `py_compile` clean across all touched modules; `tsc --noEmit`
   clean; eslint adds zero new rule violations (only the repo's pre-existing
   prettier drift remains).
+
+### Phase 13 — Bell Feed, Neutral Defaults, OTP Hardening, Phone Change ✅ (current)
+- **Notifications bell is REAL** — new `GET /notifications`
+  (`endpoints/notifications.py` + `schemas/notification.py`, JWT-gated)
+  returns `[]` until producers land. `lib/notifications.ts` lost its dummy
+  feed (kept as types-only); `NotificationsPopover` fetches via
+  `useNotifications` (token-gated, 60 s stale) and renders **"هیچ اعلانی
+  ندارید"** + spinner-on-first-fetch; read-marking is interim-local.
+- **Neutral new-user name** — `verify-otp` now creates customers with
+  `full_name=""` (was the branded "مشتری پدر ژپتو"); the admin users board
+  maps empty → "بدون نام".
+- **OTP rate-limit bug fixed (provider NEVER called when limited)** —
+  `request-otp` order is now: ① window budget check (`GET otp:reqs`,
+  ≥max → 429 + `Retry-After`), ② **atomic 120 s resend lock**
+  (`SET otp:cool NX EX 120` → held lock = instant 429 — closes the race
+  where a double-tap/slow provider call let a dispatch escape while the
+  client saw the 15-min warning), ③ `INCR` slot with self-healing TTL +
+  lost-race re-check. Provider failure (502/503) **releases the lock and
+  refunds the slot**. `MAX_OTP_REQUESTS` 3 → **5** per 15 min (cooldown
+  stays strictly 120 s); `verify-otp` also clears `otp:cool`. The auth
+  page mirrors: local attempt cap 5, and a cooldown-429 no longer locks
+  the session permanently (only the 15-min one does).
+- **Persian-digit hardening (found by probe)** — Python's ``\d``/``\D`` are
+  Unicode-aware everywhere, so a pasted "۱۲۳۴۵۶" code / "۰۹۱۲…" phone once
+  PASSED validation yet could never match the ASCII value stored in Redis.
+  New ``schemas.order.to_ascii_digits`` (Persian + Arabic-Indic → ASCII) is
+  applied inside ``canonical_phone`` and every OTP-code validator; the
+  phone/code regexes are now ``[0-9]``-strict.
+- **Secure phone change** — `POST /users/me/change-phone-request`
+  (canonicalizes `new_phone`, 400 `این شماره قبلاً ثبت شده است` on clash,
+  6-digit code + target stored as JSON in `phonechange:code:{uid}`,
+  dispatched via api.ir SMS, same 120 s/5-per-15-min guardrails keyed by
+  USER ID) and `POST /users/me/change-phone-verify` (brute-force capped,
+  re-checks the clash atomically, updates `users.phone`, returns the fresh
+  `UserMeOut`). JWTs keep working (identity resolves via JWT `sub` → id).
+  Frontend: «ویرایش» button on `/profile/account` → `PhoneChangeDialog`
+  (shadcn Dialog, new-phone step + 6-digit step with the 120 s timer and
+  resend) → `login({...user, phone})` rewrites the auth record so header,
+  profile sidebar and checkout prefill update instantly.
 
 ---
 

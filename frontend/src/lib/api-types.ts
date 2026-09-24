@@ -292,6 +292,40 @@ export interface ApiMeUpdate {
   important_date?: string | null;
 }
 
+// =============================================================================
+// Secure phone change — /users/me/change-phone-request|verify
+// =============================================================================
+
+/** POST /users/me/change-phone-request request body. */
+export interface ApiPhoneChangeRequest {
+  new_phone: string;
+}
+
+/** Response of POST /users/me/change-phone-request. */
+export interface ApiPhoneChangeSent {
+  sent: boolean;
+  ttl_seconds: number;
+}
+
+/** POST /users/me/change-phone-verify request body — the 6-digit code. */
+export interface ApiPhoneChangeVerify {
+  code: string;
+}
+
+// =============================================================================
+// Header-bell notification feed — GET /notifications
+// =============================================================================
+
+/** One notification row (empty feed until event producers land server-side). */
+export interface ApiNotification {
+  id: string;
+  kind: "order" | "promo" | "stock" | "system";
+  title: string;
+  body: string;
+  created_at: string;
+  read: boolean;
+}
+
 /** GET/POST/PUT /users/me/addresses — one saved shipping address. */
 export interface ApiUserAddress {
   id: number;

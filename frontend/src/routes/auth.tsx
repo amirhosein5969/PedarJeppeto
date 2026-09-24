@@ -33,13 +33,15 @@ export const Route = createFileRoute("/auth")({
  * Secure OTP login (real). Step 1 sends the phone to `POST /auth/request-otp`
  * (SMS by default); step 2 verifies against `POST /auth/verify-otp` and
  * stores the returned JWT. Cost/abuse control lives server-side (Redis):
- * 3 dispatches per 15 min (429) and 5 wrong-code attempts (code destroyed).
- * The client mirrors those limits: a strict 120 s countdown before resend
- * is even offered, and resend is permanently disabled once the local
- * attempt counter reaches 3 (or the API answers 429).
+ * a hard 120 s resend cooldown, a budget of 5 dispatches per 15 min (429
+ * either way, answered BEFORE the paid gateway is touched) and 5
+ * wrong-code attempts (code destroyed). The client mirrors those limits:
+ * a strict 120 s countdown before resend is even offered, and resend is
+ * permanently disabled once the local attempt counter reaches 5 (or the
+ * API answers a 15-minute 429).
  */
 const OTP_TTL_SECONDS = 120;
-const MAX_OTP_ATTEMPTS = 3;
+const MAX_OTP_ATTEMPTS = 5;
 const TOO_MANY_TOAST = "تعداد درخواست‌ها بیش از حد مجاز است. لطفاً ۱۵ دقیقه صبر کنید.";
 const PHONE_RE = /^09\d{9}$/;
 
@@ -88,7 +90,7 @@ function Auth() {
       setError("");
       const next = attempts + 1;
       setAttempts(next);
-      // Mirror the server's 3-per-15-min limit: no 4th request is ever sent.
+      // Mirror the server's 5-per-15-min limit: no 6th request is ever sent.
       if (next >= MAX_OTP_ATTEMPTS && !locked) {
         setLocked(true);
         toast.error(TOO_MANY_TOAST);
@@ -102,10 +104,19 @@ function Auth() {
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 429) {
-        setLocked(true);
-        toast.error(TOO_MANY_TOAST);
+        // A 15-minute-budget 429 permanently locks resend this session;
+        // the 120 s cooldown 429 (e.g. timer desync / second tab) only
+        // surfaces the message — the countdown UI keeps it honest.
+        if (err.message.includes("۱۵ دقیقه")) {
+          setLocked(true);
+          toast.error(TOO_MANY_TOAST);
+        } else {
+          toast.error(err.message);
+        }
       } else {
-        setError(err instanceof Error ? err.message : "ارسال کد با خطا مواجه شد؛ دوباره تلاش کنید.");
+        setError(
+          err instanceof Error ? err.message : "ارسال کد با خطا مواجه شد؛ دوباره تلاش کنید.",
+        );
       }
     },
   });
@@ -113,10 +124,12 @@ function Auth() {
   // --- POST /auth/verify-otp ---------------------------------------------------
   const verifyOtp = useMutation({
     mutationFn: async (): Promise<ApiAuthToken> =>
-      (await api.post<ApiAuthToken>("/auth/verify-otp", {
-        phone: digits,
-        code: toLatinDigits(code).trim(),
-      })).data,
+      (
+        await api.post<ApiAuthToken>("/auth/verify-otp", {
+          phone: digits,
+          code: toLatinDigits(code).trim(),
+        })
+      ).data,
     onSuccess: (data) => {
       // UNIFIED LOGIN: the role comes from the server (JWT/DB), not from a
       // hard-coded phone list — one OTP flow serves customers AND admins.
@@ -140,9 +153,7 @@ function Auth() {
     },
     onError: (err) => {
       setError(
-        err instanceof ApiError
-          ? err.message
-          : "تأیید کد با خطا مواجه شد؛ دوباره تلاش کنید."
+        err instanceof ApiError ? err.message : "تأیید کد با خطا مواجه شد؛ دوباره تلاش کنید.",
       );
     },
   });
@@ -341,8 +352,8 @@ function Auth() {
 
         <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-[11px] leading-6 text-muted-foreground">
           <ShieldCheck size={14} className="shrink-0 text-primary" />
-          کد تأیید از طریق پیامک یا تماس تلفنی به شماره‌ی شما ارسال می‌شود؛ برای
-          امنیت حساب، هر کد تنها ۲ دقیقه اعتبار دارد.
+          کد تأیید از طریق پیامک یا تماس تلفنی به شماره‌ی شما ارسال می‌شود؛ برای امنیت حساب، هر کد
+          تنها ۲ دقیقه اعتبار دارد.
         </p>
       </div>
     </div>

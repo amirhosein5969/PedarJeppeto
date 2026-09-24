@@ -16,11 +16,7 @@ import type {
   ApiStoreSettingsUpdate,
   ApiUser,
 } from "@/lib/api-types";
-import {
-  toJalaliString,
-  type AdminOrder,
-  type OrderStatus,
-} from "@/lib/admin-orders";
+import { toJalaliString, type AdminOrder, type OrderStatus } from "@/lib/admin-orders";
 import type { AdminProduct } from "@/lib/admin-products";
 import type { AdminUser } from "@/lib/admin-users";
 import type { ShippingMethodConfig, StoreSettings } from "@/lib/admin-settings";
@@ -39,7 +35,7 @@ export const toToman = (value: string | number | null | undefined): number => {
 
 /** `382500` → `"382500.00"` — the shape the backend Decimal fields accept. */
 export const fromToman = (value: number): string =>
-  (Math.round(Number.isFinite(value) ? value : 0)).toFixed(2);
+  Math.round(Number.isFinite(value) ? value : 0).toFixed(2);
 
 // =============================================================================
 // Product catalog
@@ -251,7 +247,9 @@ export function toAdminOrder(o: ApiOrder): AdminOrder {
 export function toAdminUser(u: ApiUser): AdminUser {
   return {
     id: String(u.id),
-    name: u.full_name,
+    // New OTP sign-ups start with an empty name (until they fill the
+    // profile / place an order) — render a quiet placeholder, not a blank.
+    name: u.full_name.trim() || "بدون نام",
     phone: u.phone,
     role: u.role,
     joinDate: toJalaliString(new Date(u.created_at)),
@@ -319,16 +317,13 @@ export function fromPromoUpdate(p: Partial<PromoCode>) {
       : {}),
     ...(p.maxDiscountAmount !== undefined
       ? {
-          max_discount_amount:
-            p.maxDiscountAmount > 0 ? fromToman(p.maxDiscountAmount) : null,
+          max_discount_amount: p.maxDiscountAmount > 0 ? fromToman(p.maxDiscountAmount) : null,
         }
       : {}),
     ...(p.minPurchaseAmount !== undefined
       ? { min_purchase_amount: fromToman(p.minPurchaseAmount) }
       : {}),
-    ...(p.usageLimit !== undefined
-      ? { usage_limit: p.usageLimit > 0 ? p.usageLimit : null }
-      : {}),
+    ...(p.usageLimit !== undefined ? { usage_limit: p.usageLimit > 0 ? p.usageLimit : null } : {}),
     ...(p.isActive !== undefined ? { is_active: p.isActive } : {}),
   };
 }

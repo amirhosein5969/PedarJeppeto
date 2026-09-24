@@ -11,9 +11,21 @@
  *   the cache back.
  * - **Checkout**: a single idempotent mutation (fresh UUIDv4 per attempt).
  */
-import { useMutation, useQuery, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api, getAuthPhone, uploadImage, withIdempotencyKey, ApiError } from "@/lib/api";
+import {
+  api,
+  getAuthPhone,
+  getAuthToken,
+  uploadImage,
+  withIdempotencyKey,
+  ApiError,
+} from "@/lib/api";
 import {
   buildProductDescription,
   toAdminOrder,
@@ -35,7 +47,9 @@ import type {
   ApiMe,
   ApiMeUpdate,
   ApiMyOrder,
+  ApiNotification,
   ApiOrder,
+  ApiPhoneChangeSent,
   ApiPromo,
   ApiProduct,
   ApiSalesDay,
@@ -72,6 +86,8 @@ export const queryKeys = {
   meOrders: ["me", "orders"] as const,
   // Customer address book (Phase 7).
   meAddresses: ["me", "addresses"] as const,
+  // Header-bell feed (Phase 13).
+  notifications: ["notifications"] as const,
 };
 
 /** Highly static endpoints — do NOT spam the backend while browsing. */
@@ -114,9 +130,7 @@ export function useCatalog(activeOnly = false): {
       ]);
       const slugById = new Map(categoriesRes.data.map((c) => [c.id, c.slug]));
       return {
-        products: productsRes.data.map((p) =>
-          toShopProduct(p, slugById.get(p.category_id) ?? ""),
-        ),
+        products: productsRes.data.map((p) => toShopProduct(p, slugById.get(p.category_id) ?? "")),
         categories: categoriesRes.data.map(toCategory),
       };
     },
@@ -148,9 +162,7 @@ export function useAdminCatalog(): {
       ]);
       const slugById = new Map(categoriesRes.data.map((c) => [c.id, c.slug]));
       return {
-        products: productsRes.data.map((p) =>
-          toAdminProduct(p, slugById.get(p.category_id) ?? ""),
-        ),
+        products: productsRes.data.map((p) => toAdminProduct(p, slugById.get(p.category_id) ?? "")),
         categories: categoriesRes.data.map(toCategory),
       };
     },
@@ -250,11 +262,7 @@ export function useSettings(): {
 }
 
 /** Admin mutation: PATCH /settings — then drop the cached copy for everyone. */
-export function useSaveSettings(): UseMutationResult<
-  ApiStoreSettings,
-  ApiError,
-  StoreSettings
-> {
+export function useSaveSettings(): UseMutationResult<ApiStoreSettings, ApiError, StoreSettings> {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (settings: StoreSettings) => {
@@ -389,16 +397,15 @@ export function useAddToCart(): UseMutationResult<
 }
 
 /** Remove a line. Optimistic; rolls back on error. */
-export function useRemoveFromCart(): UseMutationResult<
-  { removed: boolean },
-  ApiError,
-  number
-> {
+export function useRemoveFromCart(): UseMutationResult<{ removed: boolean }, ApiError, number> {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (productId: number) =>
-      (await api.delete<{ removed: boolean }>("/cart/remove", { params: { product_id: productId } }))
-        .data,
+      (
+        await api.delete<{ removed: boolean }>("/cart/remove", {
+          params: { product_id: productId },
+        })
+      ).data,
     onMutate: async (productId) => {
       await qc.cancelQueries({ queryKey: queryKeys.cart });
       const prev = qc.getQueryData<ApiCart>(queryKeys.cart);
@@ -538,8 +545,7 @@ export function useCartSummary() {
 export function usePromos() {
   return useQuery({
     queryKey: queryKeys.promos,
-    queryFn: async () =>
-      (await api.get<ApiPromo[]>("/promotions")).data.map(toPromo),
+    queryFn: async () => (await api.get<ApiPromo[]>("/promotions")).data.map(toPromo),
     staleTime: STATIC_STALE_MS,
   });
 }
@@ -674,8 +680,7 @@ export function usePlaceOrder(): UseMutationResult<ApiOrder, ApiError, CheckoutI
 export function useAdminOrders() {
   return useQuery({
     queryKey: queryKeys.orders,
-    queryFn: async () =>
-      (await api.get<ApiOrder[]>("/orders")).data.map(toAdminOrder),
+    queryFn: async () => (await api.get<ApiOrder[]>("/orders")).data.map(toAdminOrder),
     staleTime: CART_STALE_MS,
   });
 }
@@ -772,8 +777,7 @@ export function useMyProfile() {
 export function useSaveProfile(): UseMutationResult<ApiMe, ApiError, ApiMeUpdate> {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: ApiMeUpdate) =>
-      (await api.patch<ApiMe>("/users/me", body)).data,
+    mutationFn: async (body: ApiMeUpdate) => (await api.patch<ApiMe>("/users/me", body)).data,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.me });
       // The admin user board shows the same fields — refresh it too.
@@ -819,9 +823,7 @@ export function useSaveAddress(): UseMutationResult<
   return useMutation({
     mutationFn: async ({ id, input }) => {
       if (id !== undefined) {
-        return (
-          await api.put<ApiUserAddress>(`/users/me/addresses/${id}`, input)
-        ).data;
+        return (await api.put<ApiUserAddress>(`/users/me/addresses/${id}`, input)).data;
       }
       return (await api.post<ApiUserAddress>("/users/me/addresses", input)).data;
     },
@@ -841,6 +843,58 @@ export function useDeleteAddress(): UseMutationResult<{ deleted: boolean }, ApiE
       (await api.delete<{ deleted: boolean }>(`/users/me/addresses/${id}`)).data,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.meAddresses });
+      void qc.invalidateQueries({ queryKey: queryKeys.users });
+    },
+  });
+}
+
+// =============================================================================
+// Header-bell notification feed (Phase 13) — /notifications
+// =============================================================================
+
+/**
+ * The real notification feed (replaces the old hard-coded dummy list).
+ * Auth-gated like the other `/me`-adjacent calls so SSR/guests never fire
+ * a request that would only 401. The feed is empty until the backend
+ * starts producing notifications.
+ */
+export function useNotifications() {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: async () => (await api.get<ApiNotification[]>("/notifications")).data,
+    staleTime: 60 * 1000,
+    enabled: typeof window !== "undefined" && getAuthToken() !== null,
+  });
+}
+
+// =============================================================================
+// Secure phone change (Phase 13) — /users/me/change-phone-*
+// =============================================================================
+
+/** Step 1: POST /users/me/change-phone-request — SMS a 6-digit code to the NEW number. */
+export function useRequestPhoneChange(): UseMutationResult<ApiPhoneChangeSent, ApiError, string> {
+  return useMutation({
+    mutationFn: async (newPhone: string) =>
+      (
+        await api.post<ApiPhoneChangeSent>("/users/me/change-phone-request", {
+          new_phone: newPhone,
+        })
+      ).data,
+  });
+}
+
+/**
+ * Step 2: POST /users/me/change-phone-verify — returns the updated profile
+ * (with the NEW phone). Callers should mirror it into `useAuth` so every
+ * phone echo (header, checkout prefill, sidebar) updates instantly.
+ */
+export function useVerifyPhoneChange(): UseMutationResult<ApiMe, ApiError, string> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (code: string) =>
+      (await api.post<ApiMe>("/users/me/change-phone-verify", { code })).data,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.me });
       void qc.invalidateQueries({ queryKey: queryKeys.users });
     },
   });

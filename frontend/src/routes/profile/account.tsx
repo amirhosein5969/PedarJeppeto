@@ -19,13 +19,22 @@ import {
   useDeleteAddress,
   useMyAddresses,
   useMyProfile,
+  useRequestPhoneChange,
   useSaveAddress,
   useSaveProfile,
+  useVerifyPhoneChange,
 } from "@/hooks/queries";
 import type { ApiUserAddress } from "@/lib/api-types";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/profile/account")({
   component: ProfileAccount,
@@ -87,6 +96,9 @@ function ProfileAccount() {
   // Address-book draft: null = list view, else the form being created/edited.
   const [draft, setDraft] = useState<AddressForm | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Secure phone-change dialog (Phase 13).
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
 
   // A 404 is "signed in, no saved profile yet" — a first-run empty form.
   const isFresh = isError && error instanceof ApiError && error.status === 404;
@@ -201,8 +213,7 @@ function ProfileAccount() {
   const removeAddress = (a: ApiUserAddress) => {
     deleteAddress.mutate(a.id, {
       onSuccess: () => toast.success("آدرس حذف شد."),
-      onError: (err) =>
-        toast.error(err instanceof ApiError ? err.message : "حذف آدرس ناموفق بود."),
+      onError: (err) => toast.error(err instanceof ApiError ? err.message : "حذف آدرس ناموفق بود."),
     });
   };
 
@@ -241,9 +252,19 @@ function ProfileAccount() {
               </p>
             </div>
           </div>
-          <p className="text-[10px] leading-5 text-muted-foreground/70">
-            مبنای حساب شماست و قابل تغییر نیست.
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="hidden text-[10px] leading-5 text-muted-foreground/70 sm:block">
+              با دریافت کد تأیید روی شماره‌ی جدید تغییر می‌کند.
+            </p>
+            <button
+              type="button"
+              onClick={() => setPhoneDialogOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-bold text-foreground transition-colors hover:border-primary hover:text-primary-soft"
+            >
+              <Pencil className="size-3.5" />
+              ویرایش
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-6">
@@ -251,9 +272,7 @@ function ProfileAccount() {
             <input
               id="pf-name"
               value={profileForm.fullName}
-              onChange={(e) =>
-                setProfileForm((p) => ({ ...p, fullName: e.target.value }))
-              }
+              onChange={(e) => setProfileForm((p) => ({ ...p, fullName: e.target.value }))}
               placeholder="مثلا: پارسا جلیلو"
               className={inputCls}
               required
@@ -271,9 +290,7 @@ function ProfileAccount() {
               <input
                 id="pf-important"
                 value={profileForm.importantDate}
-                onChange={(e) =>
-                  setProfileForm((p) => ({ ...p, importantDate: e.target.value }))
-                }
+                onChange={(e) => setProfileForm((p) => ({ ...p, importantDate: e.target.value }))}
                 placeholder="مثلا: تولد: ۱۳۷۵/۰۴/۲۰ — سالگرد: ۱۳۹۸/۰۶/۱۲"
                 className={`${inputCls} pr-11`}
               />
@@ -430,7 +447,12 @@ function ProfileAccount() {
                           )}
                         </div>
                         <p className="mt-1.5 text-xs leading-6 text-muted-foreground">
-                          {[a.province, a.city, a.address, a.zip_code ? `کد پستی ${a.zip_code}` : ""]
+                          {[
+                            a.province,
+                            a.city,
+                            a.address,
+                            a.zip_code ? `کد پستی ${a.zip_code}` : "",
+                          ]
                             .filter(Boolean)
                             .join("، ")}
                         </p>
@@ -478,6 +500,9 @@ function ProfileAccount() {
           )}
         </div>
       </div>
+
+      {/* Secure phone-change dialog (Phase 13) */}
+      <PhoneChangeDialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen} />
     </div>
   );
 }
@@ -485,6 +510,247 @@ function ProfileAccount() {
 /** Shared input styling — the same quiet language as the auth page. */
 const inputCls =
   "w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary";
+
+/** Accept Persian keypad digits too (phones often auto-convert them). */
+const toLatinDigits = (s: string) => s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+
+const NEW_PHONE_RE = /^09\d{9}$/;
+const PC_COOLDOWN_SECONDS = 120;
+
+/** 120 → "02:00" */
+const formatCooldown = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+/**
+ * Secure phone change (Phase 13): step 1 SMSes a 6-digit code to the NEW
+ * number (proof of possession — the OLD number is never bypassed); step 2
+ * verifies it. Server-side mirrors the login guardrails (120 s cooldown,
+ * 5 dispatches / 15 min). On success the auth record is rewritten with the
+ * new phone so the header, sidebar and checkout prefill all update — the
+ * JWT itself keeps working (it resolves the account by id, not phone).
+ */
+function PhoneChangeDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { user, login } = useAuth();
+  const requestChange = useRequestPhoneChange();
+  const verifyChange = useVerifyPhoneChange();
+
+  const [step, setStep] = useState<"phone" | "code">("phone");
+  const [newPhone, setNewPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  const digits = toLatinDigits(newPhone).replace(/\D/g, "").slice(0, 11);
+
+  const reset = () => {
+    setStep("phone");
+    setNewPhone("");
+    setCode("");
+    setError("");
+    setCooldown(0);
+  };
+
+  const close = () => {
+    reset();
+    onOpenChange(false);
+  };
+
+  // Strict 120-second resend countdown (mirrors the server cooldown).
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [cooldown]);
+
+  const sendCode = () => {
+    if (!NEW_PHONE_RE.test(digits)) {
+      setError("شماره موبایل باید ۱۱ رقم و با 09 شروع شود (مثلا 09123456789).");
+      return;
+    }
+    if (digits === user?.phone) {
+      setError("شماره جدید با شماره فعلی شما یکسان است.");
+      return;
+    }
+    setError("");
+    requestChange.mutate(digits, {
+      onSuccess: () => {
+        setCode("");
+        setStep("code");
+        setCooldown(PC_COOLDOWN_SECONDS);
+        toast.success("کد تأیید ۶ رقمی به شماره جدید پیامک شد.");
+      },
+      onError: (err) =>
+        setError(
+          err instanceof ApiError ? err.message : "ارسال کد با خطا مواجه شد؛ دوباره تلاش کنید.",
+        ),
+    });
+  };
+
+  const submitCode = () => {
+    const clean = toLatinDigits(code).replace(/\D/g, "");
+    if (clean.length !== 6) {
+      setError("کد تأیید باید ۶ رقم باشد.");
+      return;
+    }
+    setError("");
+    verifyChange.mutate(clean, {
+      onSuccess: (updated) => {
+        if (user) login({ ...user, id: `u-${updated.phone}`, phone: updated.phone });
+        toast.success("شماره موبایل شما با موفقیت تغییر کرد.");
+        close();
+      },
+      onError: (err) =>
+        setError(
+          err instanceof ApiError ? err.message : "تأیید کد با خطا مواجه شد؛ دوباره تلاش کنید.",
+        ),
+    });
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) close();
+        else onOpenChange(true);
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-extrabold">تغییر شماره موبایل</DialogTitle>
+          <DialogDescription className="text-xs leading-6">
+            {step === "phone"
+              ? "شماره جدید را وارد کنید؛ کد تأیید برای آن پیامک می‌شود."
+              : "کد ۶ رقمی ارسال‌شده به شماره جدید را وارد کنید."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === "phone" ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendCode();
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <label htmlFor="pc-new" className="block text-xs font-bold text-foreground/80">
+                شماره موبایل جدید
+              </label>
+              <input
+                id="pc-new"
+                dir="ltr"
+                inputMode="numeric"
+                autoComplete="tel"
+                value={newPhone}
+                onChange={(e) => setNewPhone(toLatinDigits(e.target.value))}
+                placeholder="09123456789"
+                className={`${inputCls} text-center font-mono tracking-widest`}
+              />
+            </div>
+            {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+            <button
+              type="submit"
+              disabled={requestChange.isPending}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {requestChange.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> در حال ارسال کد…
+                </>
+              ) : (
+                "دریافت کد تأیید"
+              )}
+            </button>
+          </form>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submitCode();
+            }}
+            className="space-y-4"
+          >
+            <p className="rounded-xl border border-secondary/60 bg-secondary/20 p-3 text-[11px] leading-6 text-foreground/90">
+              کد تأیید به شماره‌ی{" "}
+              <span dir="ltr" className="font-mono font-bold">
+                {digits}
+              </span>{" "}
+              ارسال شد.
+            </p>
+            <div className="space-y-2">
+              <label htmlFor="pc-code" className="block text-xs font-bold text-foreground/80">
+                کد تأیید ۶ رقمی
+              </label>
+              <input
+                id="pc-code"
+                dir="ltr"
+                inputMode="numeric"
+                maxLength={6}
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(e) =>
+                  setCode(toLatinDigits(e.target.value).replace(/\D/g, "").slice(0, 6))
+                }
+                placeholder="123456"
+                className={`${inputCls} text-center text-lg font-bold tracking-[0.6em]`}
+              />
+            </div>
+            {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+            <button
+              type="submit"
+              disabled={verifyChange.isPending}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {verifyChange.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> در حال تأیید…
+                </>
+              ) : (
+                "تأیید و تغییر شماره"
+              )}
+            </button>
+
+            {cooldown > 0 ? (
+              <p className="text-center text-[11px] text-muted-foreground">
+                ارسال مجدد کد پس از{" "}
+                <span dir="ltr" className="font-mono font-bold">
+                  {formatCooldown(cooldown)}
+                </span>
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={sendCode}
+                disabled={requestChange.isPending}
+                className="w-full rounded-xl border border-border bg-background py-2.5 text-[11px] font-bold text-foreground/80 transition-colors hover:border-primary hover:text-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                ارسال مجدد کد
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep("phone");
+                setCode("");
+                setError("");
+              }}
+              className="mx-auto block text-xs font-semibold text-muted-foreground transition-colors hover:text-primary-soft"
+            >
+              اصلاح شماره
+            </button>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function Field({
   label,

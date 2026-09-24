@@ -10,6 +10,7 @@ from api.v1.endpoints import (
     auth,
     cart,
     categories,
+    notifications,
     orders,
     products,
     promotions,
@@ -29,3 +30,4 @@ api_router.include_router(orders.router)
 api_router.include_router(settings.router)
 api_router.include_router(users.router)
 api_router.include_router(analytics.router)
+api_router.include_router(notifications.router)

@@ -7,10 +7,10 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
-from schemas.order import canonical_phone
+from schemas.order import canonical_phone, to_ascii_digits
 
-_CANONICAL_PHONE_RE = re.compile(r"^09\d{9}$")
-_CODE_RE = re.compile(r"^\d{5}$")
+_CANONICAL_PHONE_RE = re.compile(r"^09[0-9]{9}$")
+_CODE_RE = re.compile(r"^[0-9]{5}$")
 
 
 class OtpMethod(str, enum.Enum):
@@ -58,7 +58,7 @@ class OtpVerifyIn(BaseModel):
     @field_validator("code")
     @classmethod
     def _digits_only(cls, value: str) -> str:
-        code = re.sub(r"\D", "", value.strip())
+        code = re.sub(r"\D", "", to_ascii_digits(value).strip())
         if not _CODE_RE.match(code):
             raise ValueError("کد تأیید باید ۵ رقم باشد.")
         return code

@@ -11,15 +11,21 @@ Flow
 
 Security & cost control (the top priorities)
 ---------------------------------------------
+* **Resend cooldown (120 s)** — ``SET otp:cool:{phone} NX EX 120`` is the
+  FIRST thing the endpoint does: an atomic per-phone lock. If the lock is
+  already held, a plain ``GET``/``SET NX`` returns immediately with
+  ``429`` and the paid provider is NEVER called. On provider failure the
+  lock is released so a genuine network hiccup never costs the user 2 min.
 * **Rate limit (anti SMS-bombing)** — ``INCR otp:reqs:{phone}`` per phone;
-  the key gets a 900 s (15 min) TTL on first touch. More than 3 OTP
-  dispatches inside the window → ``429 Too Many Requests`` and the request
-  never reaches the paid provider.
+  the key gets a 900 s (15 min) TTL. ``MAX_OTP_REQUESTS`` (5) dispatches
+  inside the window — any further request short-circuits to ``429``
+  BEFORE touching api.ir; a lost race (concurrent requests) is caught
+  again after ``INCR`` and the slot is released back.
 * **Brute-force protection** — ``INCR otp:fails:{phone}`` on wrong code
   entries (900 s TTL). More than 5 wrong attempts → the pending code is
   deleted and the client must request a fresh one.
 * Codes are stored only in Redis for 120 s; a successful verify clears the
-  ``otp:code`` / ``otp:fails`` / ``otp:reqs`` keys for the phone.
+  ``otp:code`` / ``otp:fails`` / ``otp:reqs`` / ``otp:cool`` keys.
 """
 
 from __future__ import annotations
@@ -44,13 +50,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # --- Tunables (cost/security) ---------------------------------------------------
 OTP_TTL_SECONDS = 120          # code validity
+OTP_COOLDOWN_SECONDS = 120     # minimum gap between two dispatches per phone
 RATE_WINDOW_SECONDS = 900      # 15-minute rate-limit window
-MAX_OTP_REQUESTS = 3           # dispatches allowed per phone per window
+MAX_OTP_REQUESTS = 5           # dispatches allowed per phone per window
 MAX_CODE_FAILURES = 5          # wrong-code attempts allowed per code
 
 # --- Persian error details ---------------------------------------------------------
 _DETAIL_TOO_MANY_REQUESTS = (
     "تعداد درخواست‌ها بیش از حد مجاز است. لطفاً ۱۵ دقیقه صبر کنید."
+)
+_DETAIL_COOLDOWN = (
+    "برای هر شماره، دریافت کد جدید تنها پس از ۲ دقیقه ممکن است."
 )
 _DETAIL_WRONG_CODE = "کد تأیید نادرست است."
 _DETAIL_CODE_GONE = "کد تأیید منقضی شده یا یافت نشد؛ لطفاً کد جدید دریافت کنید."
@@ -70,6 +80,19 @@ def _fails_key(phone: str) -> str:
 
 def _reqs_key(phone: str) -> str:
     return f"otp:reqs:{phone}"
+
+
+def _cool_key(phone: str) -> str:
+    return f"otp:cool:{phone}"
+
+
+async def _release_slot(redis: Redis, reqs_key: str) -> None:
+    """Give a window slot back after a dispatch that never reached the
+    provider (config/gateway failure) so the user is not silently charged
+    for an SMS that was never sent."""
+    left = await redis.decr(reqs_key)
+    if left < 1:
+        await redis.delete(reqs_key)
 
 
 def _mint_token(user: User) -> tuple[str, int]:
@@ -100,14 +123,42 @@ async def request_otp(
 ) -> OtpRequestOut:
     phone = payload.phone
     method = payload.method
-
-    # SECURITY 1 — rate limit BEFORE any provider call (cost control):
-    # at most MAX_OTP_REQUESTS dispatches per phone per 15-minute window.
     reqs_key = _reqs_key(phone)
+    cool_key = _cool_key(phone)
+
+    # SECURITY 1a — 15-minute dispatch budget (anti SMS-bombing). Checked
+    # BEFORE anything else so a blocked phone never pays for a provider call.
+    window = await redis.get(reqs_key)
+    if window is not None and int(window) >= MAX_OTP_REQUESTS:
+        retry_after = max(await redis.ttl(reqs_key), 1)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=_DETAIL_TOO_MANY_REQUESTS,
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    # SECURITY 1b — 120 s resend cooldown. ``SET NX EX`` is atomic: the
+    # first arriving request takes the lock, concurrent/early retries get
+    # an immediate 429 without ever touching api.ir.
+    lock_taken = await redis.set(
+        cool_key, "1", ex=OTP_COOLDOWN_SECONDS, nx=True
+    )
+    if not lock_taken:
+        retry_after = max(await redis.ttl(cool_key), 1)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=_DETAIL_COOLDOWN,
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    # SECURITY 1c — consume a window slot (with a self-healing TTL) and
+    # re-check the cap to survive concurrent requests that both passed 1a.
     count = await redis.incr(reqs_key)
-    if count == 1:
+    if count == 1 or (await redis.ttl(reqs_key)) < 0:
         await redis.expire(reqs_key, RATE_WINDOW_SECONDS)
     if count > MAX_OTP_REQUESTS:
+        await redis.decr(reqs_key)
+        await redis.delete(cool_key)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=_DETAIL_TOO_MANY_REQUESTS,
@@ -123,15 +174,18 @@ async def request_otp(
         else:
             await send_otp_sms(mobile=phone, code=code)
     except SmsNotConfiguredError as exc:
-        # Zero-cost failure: the gateway token is not configured.
-        await redis.delete(_code_key(phone))
+        # Zero-cost failure: the gateway token is not configured. Release
+        # the cooldown + window slot — the user never got an SMS anyway.
+        await redis.delete(_code_key(phone), cool_key)
+        await _release_slot(redis, reqs_key)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except SmsError as exc:
         # Provider failure — drop the (undeliverable) code so a stale one
-        # cannot be verified later, and surface a 502 to the client.
-        await redis.delete(_code_key(phone))
+        # cannot be verified later, release the locks, and surface a 502.
+        await redis.delete(_code_key(phone), cool_key)
+        await _release_slot(redis, reqs_key)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=_DETAIL_GATEWAY_DOWN
         ) from exc
@@ -176,13 +230,15 @@ async def verify_otp(
         )
 
     # Success — clear all OTP state for this phone.
-    await redis.delete(code_key, fails_key, _reqs_key(phone))
+    await redis.delete(code_key, fails_key, _reqs_key(phone), _cool_key(phone))
 
     # Find or create the account row (the phone was just proven via OTP).
     result = await db.execute(select(User).where(User.phone == phone))
     user = result.scalar_one_or_none()
     if user is None:
-        user = User(phone=phone, full_name="مشتری پدر ژپتو", role=UserRole.customer)
+        # New customer: EMPTY name on purpose — the real name is collected
+        # on the profile page (and required by checkout before an order).
+        user = User(phone=phone, full_name="", role=UserRole.customer)
         db.add(user)
         await db.commit()
         await db.refresh(user)

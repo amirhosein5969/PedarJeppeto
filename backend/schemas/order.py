@@ -16,12 +16,23 @@ from pydantic import BaseModel, Field, field_validator
 from db.models import Order, OrderItem, OrderStatus
 
 # Frontend parity: irPhoneRegex = /^(?:\+98|0)?9\d{9}$/
-_CANONICAL_PHONE_RE = re.compile(r"^09\d{9}$")
+_CANONICAL_PHONE_RE = re.compile(r"^09[0-9]{9}$")
+
+#: Persian + Arabic-Indic digits → ASCII. Python's ``\d``/``\D`` are
+#: Unicode-aware, so Iranian users can paste Persian digits ANYWHERE
+#: (phones, OTP codes); without translation a "۱۲۳۴۵۶" code would pass
+#: validation yet never match the ASCII code stored by the generator.
+_DIGIT_MAP = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
+def to_ascii_digits(raw: str) -> str:
+    """Translate Persian/Arabic-Indic digits to ASCII (keeps everything else)."""
+    return raw.translate(_DIGIT_MAP)
 
 
 def canonical_phone(raw: str) -> str:
     """Normalize an Iranian mobile number to its canonical ``09xxxxxxxxx``."""
-    s = raw.strip()
+    s = to_ascii_digits(raw.strip())
     if s.startswith("+98"):
         s = "0" + s[3:]
     elif s.startswith("0098"):

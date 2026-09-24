@@ -4,16 +4,15 @@ import {
   BellOff,
   BellRing,
   CheckCheck,
+  Loader2,
   Package,
   PackageOpen,
   Tag,
 } from "lucide-react";
-import { useState } from "react";
-import {
-  DUMMY_NOTIFICATIONS,
-  type AppNotification,
-  type NotificationKind,
-} from "@/lib/notifications";
+import { useMemo, useState } from "react";
+import { useNotifications } from "@/hooks/queries";
+import type { AppNotification, NotificationKind } from "@/lib/notifications";
+import type { ApiNotification } from "@/lib/api-types";
 import { cn } from "@/lib/utils";
 
 const KIND_ICONS: Record<NotificationKind, typeof Package> = {
@@ -23,22 +22,64 @@ const KIND_ICONS: Record<NotificationKind, typeof Package> = {
   system: BellRing,
 };
 
+/** Persian (Solar-Hijri) timestamp for a feed row, e.g. "۱۴۰۴/۰۷/۰۲ ۱۴:۳۰". */
+function formatNotifTime(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat("fa-IR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  } catch {
+    return "";
+  }
+}
+
+/** API row → popover view-model (icon kind falls back to "system"). */
+function toAppNotification(n: ApiNotification): AppNotification {
+  const kind: NotificationKind =
+    n.kind === "order" || n.kind === "promo" || n.kind === "stock" ? n.kind : "system";
+  return {
+    id: n.id,
+    kind,
+    title: n.title,
+    body: n.body,
+    time: formatNotifTime(n.created_at),
+    read: n.read,
+    ...(kind === "order" ? { to: "/profile/orders" } : {}),
+  };
+}
+
 /**
- * Header bell + click-to-open notification popover (dummy feed for now —
- * see `lib/notifications.ts`). Unread rows get an amber dot + badge on the
- * bell; opening a row marks it read. A full click-away layer keeps the
- * popover honest without a portal.
+ * Header bell + click-to-open notification popover, fed by the REAL
+ * backend feed (`GET /notifications`) — the old dummy list is gone and an
+ * empty feed renders "هیچ اعلانی ندارید". Unread rows get an amber dot +
+ * badge on the bell; opening a row marks it read (locally — the server
+ * read-state lands with the notification producers). A full click-away
+ * layer keeps the popover honest without a portal.
  */
 export function NotificationsPopover() {
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<AppNotification[]>(DUMMY_NOTIFICATIONS);
+  const [locallyRead, setLocallyRead] = useState<Record<string, true>>({});
+  const { data, isPending, isFetching, isError } = useNotifications();
   const navigate = useNavigate();
+
+  // Guests (query disabled) and settled requests both render the feed or
+  // the empty state — only a genuine first fetch shows the spinner.
+  const loading = isPending && isFetching && !isError;
+
+  const items = useMemo<AppNotification[]>(
+    () =>
+      (data ?? [])
+        .map(toAppNotification)
+        .map((n) => ({ ...n, read: n.read || Boolean(locallyRead[n.id]) })),
+    [data, locallyRead],
+  );
 
   const unread = items.filter((n) => !n.read).length;
 
-  const markAll = () => setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAll = () => setLocallyRead(Object.fromEntries(items.map((n) => [n.id, true as const])));
   const openItem = (n: AppNotification) => {
-    setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    setLocallyRead((prev) => ({ ...prev, [n.id]: true }));
     setOpen(false);
     if (n.to) navigate({ to: n.to as never });
   };
@@ -88,15 +129,18 @@ export function NotificationsPopover() {
               )}
             </div>
 
-            {items.length === 0 ? (
+            {loading ? (
+              <div className="grid min-h-24 place-items-center py-8">
+                <Loader2 className="size-5 animate-spin text-primary" />
+              </div>
+            ) : items.length === 0 ? (
               <div className="grid gap-2.5 px-4 py-10 text-center">
                 <span className="mx-auto grid size-14 place-items-center rounded-full border border-dashed border-primary/30 text-primary/50">
                   <BellOff size={22} />
                 </span>
-                <p className="text-xs font-bold text-foreground">اعلانی ندارید</p>
+                <p className="text-xs font-bold text-foreground">هیچ اعلانی ندارید</p>
                 <p className="mx-auto max-w-55 text-[11px] leading-5 text-muted-foreground">
-                  خبر جدیدی از کارگاه برای شما نیست؛ هر اطلاع‌رسانی مهم همین‌جا
-                  نمایش داده می‌شود.
+                  خبر جدیدی از کارگاه برای شما نیست؛ هر اطلاع‌رسانی مهم همین‌جا نمایش داده می‌شود.
                 </p>
               </div>
             ) : (

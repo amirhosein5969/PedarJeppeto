@@ -1,12 +1,17 @@
 """User (customer) models — admin user board (Phase 5) + customer portal
-(Phase 6: the ``/users/me`` family)."""
+(Phase 6: the ``/users/me`` family) + secure phone-change OTP (Phase 13)."""
 
+import re
 from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from db.models import OrderStatus, UserRole
+from schemas.order import canonical_phone, to_ascii_digits
+
+_CANONICAL_PHONE_RE = re.compile(r"^09[0-9]{9}$")
+_PHONE_CHANGE_CODE_RE = re.compile(r"^[0-9]{6}$")
 
 
 class UserResponse(BaseModel):
@@ -74,6 +79,52 @@ class UserMeUpdate(BaseModel):
     @classmethod
     def _strip(cls, v: str | None) -> str | None:
         return v.strip() if v is not None else v
+
+
+# =============================================================================
+# Secure phone change — /users/me/change-phone-request|verify
+# =============================================================================
+
+
+class PhoneChangeRequestIn(BaseModel):
+    """Body for ``POST /users/me/change-phone-request``.
+
+    ``new_phone`` is normalized to canonical ``09xxxxxxxxx`` (same rules
+    as login); a 6-digit OTP is then dispatched to THAT number, so the
+    request proves possession of the new phone before anything changes.
+    """
+
+    new_phone: str
+
+    @field_validator("new_phone")
+    @classmethod
+    def _canonicalize(cls, value: str) -> str:
+        phone = canonical_phone(value.strip())
+        if not _CANONICAL_PHONE_RE.match(phone):
+            raise ValueError(
+                "شماره موبایل معتبر نیست؛ باید ۱۱ رقم و با 09 شروع شود."
+            )
+        return phone
+
+
+class PhoneChangeSentOut(BaseModel):
+    sent: bool
+    #: How long the confirmation code stays valid (seconds).
+    ttl_seconds: int
+
+
+class PhoneChangeVerifyIn(BaseModel):
+    """Body for ``POST /users/me/change-phone-verify`` — the 6-digit code."""
+
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def _digits_only(cls, value: str) -> str:
+        code = re.sub(r"\D", "", to_ascii_digits(value).strip())
+        if not _PHONE_CHANGE_CODE_RE.match(code):
+            raise ValueError("کد تأیید باید ۶ رقم باشد.")
+        return code
 
 
 # =============================================================================

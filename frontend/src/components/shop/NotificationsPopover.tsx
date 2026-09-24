@@ -114,8 +114,8 @@ export function NotificationsPopover() {
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute left-0 top-full z-[160] mt-3 w-80 overflow-hidden rounded-2xl border border-primary/15 bg-[#1a1714]/95 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.85)] backdrop-blur-md">
-            <div className="flex items-center justify-between border-b border-primary/10 bg-primary/5 px-4 py-3">
+          <div className="absolute left-0 top-full z-[160] mt-2 w-[calc(100vw-2rem)] max-w-80 overflow-hidden rounded-xl border border-primary/15 bg-[#1a1714]/95 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.85)] backdrop-blur-md sm:mt-3 sm:w-80 sm:max-w-none sm:rounded-2xl">
+            <div className="flex items-center justify-between border-b border-primary/10 bg-primary/5 px-3 py-2 sm:px-4 sm:py-3">
               <span className="text-sm font-extrabold text-foreground">اعلان‌ها</span>
               {unread > 0 && (
                 <button
@@ -130,13 +130,13 @@ export function NotificationsPopover() {
             </div>
 
             {loading ? (
-              <div className="grid min-h-24 place-items-center py-8">
+              <div className="grid min-h-20 place-items-center py-6 sm:min-h-24 sm:py-8">
                 <Loader2 className="size-5 animate-spin text-primary" />
               </div>
             ) : items.length === 0 ? (
-              <div className="grid gap-2.5 px-4 py-10 text-center">
-                <span className="mx-auto grid size-14 place-items-center rounded-full border border-dashed border-primary/30 text-primary/50">
-                  <BellOff size={22} />
+              <div className="grid gap-2 px-3 py-6 text-center sm:gap-2.5 sm:px-4 sm:py-10">
+                <span className="mx-auto grid size-11 place-items-center rounded-full border border-dashed border-primary/30 text-primary/50 sm:size-14">
+                  <BellOff className="size-5 sm:size-6" />
                 </span>
                 <p className="text-xs font-bold text-foreground">هیچ اعلانی ندارید</p>
                 <p className="mx-auto max-w-55 text-[11px] leading-5 text-muted-foreground">
@@ -144,7 +144,7 @@ export function NotificationsPopover() {
                 </p>
               </div>
             ) : (
-              <ul className="max-h-80 divide-y divide-primary/10 overflow-y-auto">
+              <ul className="max-h-[55vh] divide-y divide-primary/10 overflow-y-auto sm:max-h-80">
                 {items.map((n) => {
                   const Icon = KIND_ICONS[n.kind] ?? BellRing;
                   return (
@@ -153,13 +153,13 @@ export function NotificationsPopover() {
                         type="button"
                         onClick={() => openItem(n)}
                         className={cn(
-                          "flex w-full items-start gap-3 px-4 py-3.5 text-right transition-colors duration-200 hover:bg-primary/5",
+                          "flex w-full items-start gap-2.5 px-3 py-2.5 text-right transition-colors duration-200 hover:bg-primary/5 sm:gap-3 sm:px-4 sm:py-3.5",
                           !n.read && "bg-primary/[0.04]",
                         )}
                       >
                         <span
                           className={cn(
-                            "mt-0.5 grid size-9 shrink-0 place-items-center rounded-full",
+                            "mt-0.5 grid size-8 shrink-0 place-items-center rounded-full sm:size-9",
                             n.read
                               ? "bg-white/5 text-muted-foreground"
                               : "bg-primary/15 text-primary-soft",
@@ -203,7 +203,7 @@ export function NotificationsPopover() {
             <Link
               to="/profile/orders"
               onClick={() => setOpen(false)}
-              className="block border-t border-primary/10 px-4 py-3 text-center text-[11px] font-bold text-primary-soft transition-colors hover:bg-primary/5 hover:text-foreground"
+              className="block border-t border-primary/10 px-3 py-2.5 text-center text-[11px] font-bold text-primary-soft transition-colors hover:bg-primary/5 hover:text-foreground sm:px-4 sm:py-3"
             >
               مشاهده‌ی سفارش‌های من
             </Link>

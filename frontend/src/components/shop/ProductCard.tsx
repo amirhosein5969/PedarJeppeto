@@ -56,31 +56,35 @@ export function ProductCard({
         {highlightDiscount && (
           /* Workshop sale badge — same deal-badge design as the section-title
              badge (amber gradient pill + flame), anchored to the image corner. */
-          <span className="deal-badge absolute top-3 right-3 flex w-fit items-center gap-1 rounded-full px-3 py-1 text-[11px] font-extrabold">
-            <Flame size={13} strokeWidth={2.5} />
+          <span className="deal-badge absolute top-2 right-2 flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold md:top-3 md:right-3 md:px-3 md:py-1 md:text-[11px]">
+            <Flame className="size-3 md:size-[13px]" strokeWidth={2.5} />
             حراج کارگاه
           </span>
         )}
       </div>
 
-      <div className="pointer-events-none relative flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-center gap-1.5 text-xs font-medium text-primary-soft">
+      <div className="pointer-events-none relative flex flex-1 flex-col gap-1 p-2.5 md:gap-2 md:p-4">
+        <div className="flex items-center gap-1.5 text-[10px] font-medium text-primary-soft md:text-xs">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-soft" />
-          {species}
+          <span className="truncate">{species}</span>
         </div>
-        <h3 className="line-clamp-1 font-bold text-foreground">{product.name}</h3>
-        <p className="line-clamp-2 text-xs leading-6 text-muted-foreground">{product.summary}</p>
+        <h3 className="line-clamp-1 text-[13px] leading-6 font-bold text-foreground md:text-base">
+          {product.name}
+        </h3>
+        <p className="line-clamp-1 text-[11px] leading-5 text-muted-foreground md:line-clamp-2 md:text-xs md:leading-6">
+          {product.summary}
+        </p>
 
-        <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+        <div className="mt-auto flex items-end justify-between gap-1.5 pt-2 md:gap-2 md:pt-3">
           <div className="min-w-0">
             {/* Top-selling rail hides the discount logic entirely: the final
                 price stands alone, no crossed-out original, no badge. */}
             {!hideDiscount && (
-              <div className="text-xs text-muted-foreground line-through">
+              <div className="text-[10px] text-muted-foreground line-through md:text-xs">
                 {formatPrice(product.price)}
               </div>
             )}
-            <div className="truncate font-bold text-primary-soft">
+            <div className="truncate text-[13px] font-bold text-primary-soft md:text-base">
               {formatPrice(finalPrice(product))}
             </div>
           </div>

@@ -37,9 +37,7 @@ function Home() {
   const { data: catalog, isPending } = useCatalog(true);
   const categories = catalog?.categories ?? [];
   const bestSellers = catalog?.products ?? [];
-  const mostDiscounted = [...(catalog?.products ?? [])].sort(
-    (a, b) => b.discount - a.discount,
-  );
+  const mostDiscounted = [...(catalog?.products ?? [])].sort((a, b) => b.discount - a.discount);
   // Admin-managed hero slider (mock, localStorage): when a custom array is
   // saved it fully replaces the built-in slides, in the exact admin order.
   const [adminSlides, setAdminSlides] = useState<HeroSlide[] | null>(null);
@@ -76,7 +74,7 @@ function Home() {
     <div>
       {/* Hero — mirrors the admin-managed banner array (or the built-in
           defaults when the admin hasn't saved a custom one). */}
-      <section className="relative h-[62vh] min-h-96 w-full overflow-hidden">
+      <section className="relative h-[46vh] min-h-72 w-full overflow-hidden sm:h-[56vh] md:h-[62vh] md:min-h-96">
         {heroSlides.map((s, i) => (
           <img
             key={s.id}
@@ -90,28 +88,28 @@ function Home() {
           />
         ))}
         <div className="absolute inset-0 bg-linear-to-l from-background via-background/70 to-background/30" />
-        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col justify-center gap-5 px-4">
+        <div className="relative mx-auto flex h-full w-full max-w-7xl flex-col justify-center gap-2.5 px-4 md:gap-5">
           {heroSlides[active % heroSlides.length]?.tag && (
-            <span className="w-fit rounded-full border border-primary/50 bg-background/50 px-4 py-1.5 text-xs text-primary-soft">
+            <span className="w-fit rounded-full border border-primary/50 bg-background/50 px-3 py-0.5 text-[11px] text-primary-soft md:px-4 md:py-1.5 md:text-xs">
               {heroSlides[active % heroSlides.length]?.tag}
             </span>
           )}
-          <h1 className="max-w-xl text-4xl leading-tight font-extrabold text-foreground sm:text-5xl">
+          <h1 className="max-w-xl text-xl leading-7 font-extrabold text-foreground sm:text-4xl sm:leading-tight md:text-5xl">
             {heroSlides[active % heroSlides.length]?.title}
           </h1>
-          <p className="max-w-md text-sm leading-8 text-muted-foreground sm:text-base">
+          <p className="max-w-md text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-7 md:text-base md:leading-8">
             {heroSlides[active % heroSlides.length]?.text}
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 md:gap-3">
             <Link
               to="/shop"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 md:rounded-xl md:px-6 md:py-3 md:text-sm"
             >
-              مشاهده محصولات <ArrowLeft size={17} />
+              مشاهده محصولات <ArrowLeft size={15} className="md:size-[17px]" />
             </Link>
             <Link
               to="/about"
-              className="rounded-xl border border-primary/50 px-6 py-3 text-sm font-bold text-primary-soft transition-colors duration-300 hover:bg-primary hover:text-primary-foreground"
+              className="rounded-lg border border-primary/50 px-4 py-2 text-xs font-bold text-primary-soft transition-colors duration-300 hover:bg-primary hover:text-primary-foreground md:rounded-xl md:px-6 md:py-3 md:text-sm"
             >
               داستان کارگاه
             </Link>
@@ -132,39 +130,41 @@ function Home() {
       </section>
 
       {/* Categories */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-16">
+      <section className="mx-auto w-full max-w-7xl px-4 py-10 md:py-16">
         <SectionHeader title="دسته‌بندی محصولات" subtitle="از آشپزخانه تا میز کار" />
         {isPending ? (
-          <div className="mt-8 grid min-h-48 animate-pulse place-items-center rounded-2xl border border-border text-xs text-muted-foreground">
+          <div className="mt-6 grid min-h-48 animate-pulse place-items-center rounded-2xl border border-border text-xs text-muted-foreground md:mt-8">
             در حال بارگذاری دسته‌بندی‌ها…
           </div>
         ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((c) => (
-            <Link
-              key={c.slug}
-              to="/category/$slug"
-              params={{ slug: c.slug }}
-              className="group relative h-72 overflow-hidden rounded-2xl border border-border shadow-soft transition-colors duration-300 hover:border-primary/70"
-            >
-              <img
-                src={c.image}
-                alt={c.title}
-                loading="lazy"
-                width={900}
-                height={1100}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-background via-background/40 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 space-y-3 p-5">
-                <h3 className="text-base leading-7 font-bold">{c.title}</h3>
-                <span className="inline-block rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
-                  مشاهده محصولات
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+          <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-4 md:gap-5">
+            {categories.map((c) => (
+              <Link
+                key={c.slug}
+                to="/category/$slug"
+                params={{ slug: c.slug }}
+                className="group relative h-44 overflow-hidden rounded-xl border border-border shadow-soft transition-colors duration-300 hover:border-primary/70 md:h-72 md:rounded-2xl"
+              >
+                <img
+                  src={c.image}
+                  alt={c.title}
+                  loading="lazy"
+                  width={900}
+                  height={1100}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-background via-background/40 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 space-y-1.5 p-3 md:space-y-3 md:p-5">
+                  <h3 className="text-sm leading-5 font-bold md:text-base md:leading-7">
+                    {c.title}
+                  </h3>
+                  <span className="inline-block rounded-md bg-primary px-2.5 py-1 text-[10px] font-bold text-primary-foreground md:rounded-lg md:px-4 md:py-2 md:text-xs">
+                    مشاهده محصولات
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 
@@ -174,12 +174,12 @@ function Home() {
           <div className="min-h-72 animate-pulse rounded-2xl border border-border" />
         </div>
       ) : (
-      <ProductRail
-        title="پرفروش‌ترین محصولات"
-        subtitle="انتخاب مشتریان پدر ژپتو"
-        items={bestSellers}
-        hideDiscount
-      />
+        <ProductRail
+          title="پرفروش‌ترین محصولات"
+          subtitle="انتخاب مشتریان پدر ژپتو"
+          items={bestSellers}
+          hideDiscount
+        />
       )}
 
       {/* Most discounted carousel — same layout as best sellers */}
@@ -188,13 +188,13 @@ function Home() {
           <div className="min-h-72 animate-pulse rounded-2xl border border-border" />
         </div>
       ) : (
-      <ProductRail
-        title="پرتخفیف‌ترین محصولات"
-        subtitle="بیشترین تخفیف‌های این هفته"
-        items={mostDiscounted}
-        highlightDiscount
-        badge="حراج کارگاه"
-      />
+        <ProductRail
+          title="پرتخفیف‌ترین محصولات"
+          subtitle="بیشترین تخفیف‌های این هفته"
+          items={mostDiscounted}
+          highlightDiscount
+          badge="حراج کارگاه"
+        />
       )}
 
       {/* About */}

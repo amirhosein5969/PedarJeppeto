@@ -49,7 +49,9 @@ function Shop() {
           to="/shop"
           search={{ q }}
           className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-300 ${
-            !cat ? "bg-primary text-primary-foreground" : "border border-border hover:border-primary"
+            !cat
+              ? "bg-primary text-primary-foreground"
+              : "border border-border hover:border-primary"
           }`}
         >
           همه
@@ -77,7 +79,7 @@ function Shop() {
       ) : list.length === 0 ? (
         <p className="py-20 text-center text-sm text-muted-foreground">محصولی پیدا نشد.</p>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
           {list.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}

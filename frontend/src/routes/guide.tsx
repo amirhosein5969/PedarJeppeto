@@ -81,33 +81,37 @@ function Guide() {
         subtitle="از انتخاب تا رسیدن بسته‌ی چوبی شما سه قدم بیشتر فاصله نیست — و با چند عادت ساده، محصولات دست‌ساز پدر ژپتو نسل‌به‌نسل دوام می‌آورند."
       />
 
-      <section className="mt-10 grid gap-5 md:grid-cols-3">
+      <section className="mt-8 grid gap-3 sm:gap-5 md:grid-cols-3">
         {steps.map((step) => (
           <div
             key={step.title}
-            className="relative rounded-3xl border border-border bg-card p-6 text-center transition-colors duration-300 hover:border-primary/50"
+            className="relative rounded-2xl border border-border bg-card p-4 text-center transition-colors duration-300 hover:border-primary/50 md:rounded-3xl md:p-6"
           >
-            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary/40 text-primary">
-              <step.icon size={24} strokeWidth={1.75} />
+            <span className="mx-auto grid size-11 place-items-center rounded-xl bg-secondary/40 text-primary md:size-14 md:rounded-2xl">
+              <step.icon className="size-5 md:size-6" strokeWidth={1.75} />
             </span>
-            <h2 className="mt-4 font-bold text-foreground">{step.title}</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">{step.text}</p>
+            <h2 className="mt-3 text-sm font-bold text-foreground md:mt-4 md:text-base">
+              {step.title}
+            </h2>
+            <p className="mt-1.5 text-xs leading-6 text-muted-foreground md:mt-2 md:text-sm md:leading-7">
+              {step.text}
+            </p>
           </div>
         ))}
       </section>
 
-      <section className="mt-5 flex flex-col items-start gap-5 rounded-3xl border border-primary/25 bg-[#1c1916] p-6 sm:flex-row sm:items-center sm:p-8">
-        <span className="grid size-14 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/10 text-primary-soft">
-          <RotateCcw size={24} strokeWidth={1.75} />
+      <section className="mt-3 flex flex-col items-start gap-4 rounded-2xl border border-primary/25 bg-[#1c1916] p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-8 md:mt-5 md:rounded-3xl">
+        <span className="grid size-11 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/10 text-primary-soft md:size-14">
+          <RotateCcw className="size-5 md:size-6" strokeWidth={1.75} />
         </span>
         <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-lg font-extrabold text-foreground">شرایط مرجوعی</h2>
-            <span className="rounded-full border border-primary/30 bg-linear-to-r from-primary/20 to-primary/5 px-3 py-1 text-xs font-bold text-primary-soft">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            <h2 className="text-base font-extrabold text-foreground md:text-lg">شرایط مرجوعی</h2>
+            <span className="rounded-full border border-primary/30 bg-linear-to-r from-primary/20 to-primary/5 px-2.5 py-0.5 text-[11px] font-bold text-primary-soft md:px-3 md:py-1 md:text-xs">
               ۷ روز ضمانت بازگشت
             </span>
           </div>
-          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+          <p className="mt-1.5 text-xs leading-6 text-muted-foreground md:mt-2 md:text-sm md:leading-7">
             تا ۷ روز پس از دریافت کالا، در صورت سالم بودن بسته‌بندی و محصول، امکان مرجوعی وجود دارد
             و مبلغ پرداختی به همان حساب شما بازمی‌گردد.
           </p>
@@ -120,24 +124,28 @@ function Guide() {
         </Link>
       </section>
 
-      <section className="mt-14 overflow-hidden rounded-3xl border border-border bg-card">
-        <div className="wood-texture border-b border-border/60 p-6 sm:p-8">
-          <p className="text-xs font-bold tracking-wide text-primary">مراقبت مثل یک نجار</p>
-          <h2 className="mt-2 text-xl font-extrabold sm:text-2xl">راهنمای نگهداری چوب</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-8 text-muted-foreground">
+      <section className="mt-10 overflow-hidden rounded-2xl border border-border bg-card md:mt-14 md:rounded-3xl">
+        <div className="wood-texture border-b border-border/60 p-4 sm:p-8">
+          <p className="text-[11px] font-bold tracking-wide text-primary md:text-xs">
+            مراقبت مثل یک نجار
+          </p>
+          <h2 className="mt-1.5 text-lg font-extrabold sm:text-2xl md:mt-2">راهنمای نگهداری چوب</h2>
+          <p className="mt-2 max-w-2xl text-xs leading-6 text-muted-foreground md:mt-3 md:text-sm md:leading-8">
             چوب طبیعی ماده‌ای زنده است؛ با تغییر رطوبت نفس می‌کشد. مراقبت از آن بیشتر از دهه‌ها عمر
             و درخشش گرمش را تضمین می‌کند.
           </p>
         </div>
-        <div className="grid gap-8 p-6 sm:grid-cols-2 sm:p-8">
+        <div className="grid gap-5 p-4 sm:grid-cols-2 sm:gap-8 sm:p-8">
           {careTips.map((tip) => (
-            <div key={tip.title} className="flex items-start gap-4">
-              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-secondary/40 text-primary">
-                <tip.icon size={19} strokeWidth={1.75} />
+            <div key={tip.title} className="flex items-start gap-3 sm:gap-4">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary/40 text-primary sm:size-11 sm:rounded-xl">
+                <tip.icon className="size-4 sm:size-5" strokeWidth={1.75} />
               </span>
-              <div>
-                <h3 className="font-bold text-foreground">{tip.title}</h3>
-                <p className="mt-1.5 text-sm leading-7 text-muted-foreground">{tip.text}</p>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-foreground sm:text-base">{tip.title}</h3>
+                <p className="mt-1 text-xs leading-6 text-muted-foreground sm:mt-1.5 sm:text-sm sm:leading-7">
+                  {tip.text}
+                </p>
               </div>
             </div>
           ))}

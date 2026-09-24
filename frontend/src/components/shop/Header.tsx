@@ -20,10 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AnnouncementBar,
-  type AnnouncementItem,
-} from "./AnnouncementBar";
+import { AnnouncementBar, type AnnouncementItem } from "./AnnouncementBar";
 import { Logo } from "./Logo";
 import { MiniCart } from "./MiniCart";
 import { NotificationsPopover } from "./NotificationsPopover";
@@ -117,8 +114,7 @@ export function Header() {
     {
       id: "store-announcement",
       text:
-        storeSettings?.announcementText?.trim() ||
-        "ارسال رایگان برای خریدهای بالای ۱ میلیون تومان",
+        storeSettings?.announcementText?.trim() || "ارسال رایگان برای خریدهای بالای ۱ میلیون تومان",
       icon: "truck",
     },
     { id: "handmade", text: "ساخت دست‌ساز با چوب طبیعی", icon: "leaf" },
@@ -142,13 +138,19 @@ export function Header() {
               the logo sits on the far right, search in the center and the
               action cluster (cart, account, bell) on the far left. */}
           <div className="flex items-center gap-2.5 py-2.5 sm:gap-4 sm:py-2">
-            {/* Brand — the untouched glow Logo, far right */}
+            {/* Brand — glow Logo, far right. Compact height on phones so the
+                tier-2 row stays a slim native-app bar; full size from sm up. */}
             <Link
               to="/"
               className="flex shrink-0 items-center justify-center"
               aria-label="پدر ژپتو — صفحه‌ی نخست"
             >
-              <Logo size={85} glow />
+              <span className="sm:hidden">
+                <Logo size={52} glow />
+              </span>
+              <span className="hidden sm:block">
+                <Logo size={85} glow />
+              </span>
             </Link>
 
             {/* Center: wide pill search (tablet & up) */}
@@ -200,7 +202,9 @@ export function Header() {
                       </span>
                     )}
                   </span>
-                  <span className="hidden text-xs font-bold text-foreground/85 lg:block">سبد خرید</span>
+                  <span className="hidden text-xs font-bold text-foreground/85 lg:block">
+                    سبد خرید
+                  </span>
                 </Link>
                 <MiniCart />
               </div>
@@ -210,10 +214,11 @@ export function Header() {
               {isLoading || !user ? (
                 <Link
                   to="/auth"
-                  className="hidden items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-bold whitespace-nowrap text-primary-soft transition-all duration-300 hover:border-primary/50 hover:bg-primary/20 sm:flex"
+                  className="flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-2 text-sm font-bold whitespace-nowrap text-primary-soft transition-all duration-300 hover:border-primary/50 hover:bg-primary/20 sm:px-4"
+                  aria-label="ورود / ثبت‌نام"
                 >
                   <User size={16} strokeWidth={1.8} />
-                  ورود / ثبت‌نام
+                  <span className="hidden sm:inline">ورود / ثبت‌نام</span>
                 </Link>
               ) : (
                 <DropdownMenu>
@@ -221,10 +226,10 @@ export function Header() {
                     <button
                       type="button"
                       aria-label="حساب کاربری من"
-                      className="hidden items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-bold whitespace-nowrap text-primary-soft transition-all duration-300 hover:border-primary/50 hover:bg-primary/20 sm:flex"
+                      className="flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-2 text-sm font-bold whitespace-nowrap text-primary-soft transition-all duration-300 hover:border-primary/50 hover:bg-primary/20 sm:px-4"
                     >
                       <UserRound size={16} strokeWidth={1.8} />
-                      حساب کاربری من
+                      <span className="hidden sm:inline">حساب کاربری من</span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -240,7 +245,10 @@ export function Header() {
                       )}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem className="gap-2.5" onClick={() => navigate({ to: "/profile/orders" })}>
+                    <DropdownMenuItem
+                      className="gap-2.5"
+                      onClick={() => navigate({ to: "/profile/orders" })}
+                    >
                       <ShoppingCart size={15} />
                       سفارش‌های من
                     </DropdownMenuItem>
@@ -276,7 +284,7 @@ export function Header() {
 
               <button
                 onClick={() => setOpen((v) => !v)}
-                className="grid size-10 place-items-center rounded-full border border-primary/15 bg-card text-foreground/85 transition-colors duration-300 hover:border-primary/40 lg:hidden"
+                className="grid size-10 place-items-center rounded-full border border-primary/15 bg-card text-foreground/85 transition-colors duration-300 hover:border-primary/40 md:hidden"
                 aria-label="منو"
               >
                 {open ? <X size={18} /> : <Menu size={18} />}
@@ -292,10 +300,11 @@ export function Header() {
             </div>
           </div>
 
-          {/* Tier 3 — perfectly centered navigation row (collapses on scroll) */}
+          {/* Tier 3 — perfectly centered navigation row (tablet & up only;
+              phones get the hamburger menu). Collapses on scroll-down. */}
           <div
             className={cn(
-              "overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none",
+              "hidden overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none md:block",
               navHidden
                 ? "max-h-0 -translate-y-2 py-0 opacity-0 pointer-events-none"
                 : "max-h-16 translate-y-0 py-1.5 opacity-100 lg:overflow-visible",
@@ -330,7 +339,9 @@ export function Header() {
                     {(categories ?? []).map((c) => (
                       <DropdownMenuItem
                         key={c.slug}
-                        onClick={() => navigate({ to: "/category/$slug", params: { slug: c.slug } })}
+                        onClick={() =>
+                          navigate({ to: "/category/$slug", params: { slug: c.slug } })
+                        }
                       >
                         {c.name}
                       </DropdownMenuItem>
@@ -363,9 +374,9 @@ export function Header() {
             </form>
           )}
 
-          {/* Mobile menu */}
+          {/* Mobile menu (phones only — inline links live in tier 3 from md up) */}
           {open && (
-            <nav className="mt-2 mb-3 grid gap-1 rounded-xl border border-border bg-card p-2 lg:hidden">
+            <nav className="mt-2 mb-3 grid gap-1 rounded-xl border border-border bg-card p-2 md:hidden">
               <div className="px-3 py-2 text-sm font-bold text-foreground">دسته‌بندی‌ها</div>
               {categories?.map((c) => (
                 <Link
@@ -435,10 +446,12 @@ export function Header() {
       </header>
 
       {/* Placeholder: the fixed header is out of flow, so this reserves its
-          expanded height — tier 1 (29px) + tier 2 (105/101px, 85px glow logo) +
-          tier 3 (45px nav row) — so page content is never covered at the top.
-          It is static: the nav row collapsing on scroll never moves content. */}
-      <div aria-hidden="true" className="h-[182px] shrink-0 sm:h-[178px]" />
+          expanded height — phones: tier 1 (29px) + tier 2 only (52px compact
+          logo + padding, ~106px; nav lives in the hamburger); tablet (sm):
+          full 85px logo without the nav row (~135px); desktop (md+): + tier 3
+          (45px nav row) = ~178px. It is static: the nav row collapsing on
+          scroll never moves content. */}
+      <div aria-hidden="true" className="h-[106px] shrink-0 sm:h-[135px] md:h-[178px]" />
     </>
   );
 }

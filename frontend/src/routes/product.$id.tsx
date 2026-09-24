@@ -232,8 +232,8 @@ function ProductPage() {
 
       {related.length > 0 && (
         <section className="mt-16">
-          <h2 className="text-xl font-extrabold">محصولات مشابه</h2>
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <h2 className="text-lg font-extrabold md:text-xl">محصولات مشابه</h2>
+          <div className="mt-4 grid grid-cols-2 gap-3 md:mt-6 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

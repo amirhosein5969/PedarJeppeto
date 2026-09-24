@@ -83,11 +83,11 @@ export function AddToCartButton({ product, compact, className, oil, woodType, co
         className={cn(
           "inline-flex items-center justify-center gap-2 rounded-xl bg-primary font-bold text-primary-foreground transition-all duration-300 hover:shadow-glow",
           compact
-            ? "size-10 rounded-lg bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+            ? "size-9 rounded-lg bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground md:size-10"
             : "w-full px-6 py-3 text-sm hover:-translate-y-0.5 sm:w-auto",
         )}
       >
-        <ShoppingBag size={18} />
+        <ShoppingBag size={compact ? 16 : 18} />
         {!compact && "افزودن به سبد خرید"}
       </button>
 
